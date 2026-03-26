@@ -1,5 +1,3 @@
-// Хранилище состояния игры
-
 const GameStore = {
   state: {
     map: new Map(),
@@ -8,7 +6,7 @@ const GameStore = {
     bots: [],
     currentPlayer: 'player',
     turn: 1,
-    phase: 'menu', // menu, action, resolution, gameover
+    phase: 'menu',
     selectedTile: null,
     attackTarget: null,
     attackAmount: 10,
@@ -19,26 +17,23 @@ const GameStore = {
       mapSize: 'small',
       botCount: 2,
       difficulty: 'easy'
-    }
+    },
+    loaded: false
   },
 
-  // Получить состояние
   getState() {
     return this.state;
   },
 
-  // Обновить состояние
   setState(newState) {
     this.state = { ...this.state, ...newState };
     this.notifyListeners();
   },
 
-  // Получить клетку по ID
   getTile(tileId) {
     return this.state.map.get(tileId);
   },
 
-  // Обновить клетку
   updateTile(tileId, updates) {
     const tile = this.state.map.get(tileId);
     if (tile) {
@@ -48,22 +43,18 @@ const GameStore = {
     }
   },
 
-  // Получить все клетки игрока
   getPlayerTiles(ownerId) {
     return Array.from(this.state.map.values()).filter(t => t.ownerId === ownerId);
   },
 
-  // Подсчитать территории
   countTerritories(ownerId) {
     return this.getPlayerTiles(ownerId).length;
   },
 
-  // Подсчитать войска
   countTroops(ownerId) {
     return this.getPlayerTiles(ownerId).reduce((sum, t) => sum + t.troops, 0);
   },
 
-  // Слушатели изменений
   listeners: [],
   subscribe(listener) {
     this.listeners.push(listener);
@@ -72,7 +63,6 @@ const GameStore = {
     this.listeners.forEach(fn => fn(this.state));
   },
 
-  // Сброс
   reset() {
     this.state = {
       map: new Map(),
@@ -88,11 +78,16 @@ const GameStore = {
       message: '🎮 Ваш ход!',
       gameOver: false,
       winner: null,
-      settings: this.state.settings
+      settings: this.state.settings,
+      loaded: true
     };
+    this.notifyListeners();
+  },
+
+  setLoading(loaded) {
+    this.state.loaded = loaded;
     this.notifyListeners();
   }
 };
 
-// Сделать доступным глобально
 window.GameStore = GameStore;
