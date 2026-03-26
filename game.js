@@ -7,78 +7,68 @@ tg.expand();
 class SoundManager {
     constructor() {
         this.enabled = true;
-        this.audioContext = null;
+        this.musicEnabled = false;
         this.sounds = {};
+        this.bgMusic = null;
         this.init();
     }
 
     init() {
-        try {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        } catch (e) {
-            console.log('Audio not supported');
+        const soundFiles = {
+            card: 'sounds/card.mp3',
+            chip: 'sounds/chip.mp3',
+            win: 'sounds/win.mp3',
+            lose: 'sounds/lose.mp3',
+            click: 'sounds/click.mp3'
+        };
+
+        for (const [name, src] of Object.entries(soundFiles)) {
+            this.sounds[name] = new Audio(src);
+            this.sounds[name].volume = 0.4;
+            this.sounds[name].load();
+        }
+
+        this.bgMusic = new Audio('sounds/bg-music.mp3');
+        this.bgMusic.loop = true;
+        this.bgMusic.volume = 0.15;
+    }
+
+    play(name) {
+        if (!this.enabled) return;
+        const sound = this.sounds[name];
+        if (sound) {
+            const clone = sound.cloneNode();
+            clone.volume = sound.volume;
+            clone.play().catch(() => {});
         }
     }
 
-    playTone(frequency, duration, type = 'sine', volume = 0.3) {
-        if (!this.enabled || !this.audioContext) return;
-        
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
-        
-        oscillator.frequency.value = frequency;
-        oscillator.type = type;
-        
-        gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
-        
-        oscillator.start(this.audioContext.currentTime);
-        oscillator.stop(this.audioContext.currentTime + duration);
+    playMusic() {
+        if (this.musicEnabled && this.bgMusic) {
+            this.bgMusic.play().catch(() => {});
+        }
     }
 
-    playCardDeal() {
-        this.playTone(800, 0.1, 'sine', 0.2);
-        setTimeout(() => this.playTone(600, 0.1, 'sine', 0.2), 50);
-    }
-
-    playCardFlip() {
-        this.playTone(1000, 0.15, 'triangle', 0.3);
-    }
-
-    playChip() {
-        this.playTone(1200, 0.08, 'sine', 0.2);
-        setTimeout(() => this.playTone(1400, 0.08, 'sine', 0.2), 40);
-    }
-
-    playWin() {
-        const notes = [523, 659, 784, 1046];
-        notes.forEach((freq, i) => {
-            setTimeout(() => this.playTone(freq, 0.3, 'sine', 0.3), i * 150);
-        });
-    }
-
-    playLose() {
-        const notes = [784, 659, 523, 392];
-        notes.forEach((freq, i) => {
-            setTimeout(() => this.playTone(freq, 0.4, 'sine', 0.2), i * 200);
-        });
-    }
-
-    playButtonClick() {
-        this.playTone(800, 0.05, 'sine', 0.15);
-    }
-
-    playRaise() {
-        this.playTone(1000, 0.1, 'square', 0.2);
-        setTimeout(() => this.playTone(1500, 0.15, 'square', 0.25), 100);
+    stopMusic() {
+        if (this.bgMusic) {
+            this.bgMusic.pause();
+            this.bgMusic.currentTime = 0;
+        }
     }
 
     toggle() {
         this.enabled = !this.enabled;
         return this.enabled;
+    }
+
+    toggleMusic() {
+        this.musicEnabled = !this.musicEnabled;
+        if (this.musicEnabled) {
+            this.playMusic();
+        } else {
+            this.stopMusic();
+        }
+        return this.musicEnabled;
     }
 }
 
@@ -124,6 +114,165 @@ class VibrationManager {
     }
 }
 
+// ===== УМНЫЙ ИИ БОТ =====
+class BotAI {
+    constructor(difficulty = 'medium') {
+        this.difficulty = difficulty;
+        this.aggression = {
+            easy: 0.3,
+            medium: 0.5,
+            hard: 0.7,
+            expert: 0.85
+        };
+        this.bluffChance = {
+            easy: 0.1,
+            medium: 0.2,
+            hard: 0.35,
+            expert: 0.5
+        };
+        this.memory = {
+            playerFolds: 0,
+            playerRaises: 0,
+            totalRounds: 0
+        };
+    }
+
+    setDifficulty(level) {
+        this.difficulty = level;
+    }
+
+    // Оценка силы руки (0-1)
+    evaluateHandStrength(handCards, communityCards) {
+        const allCards = [...handCards, ...communityCards];
+        const evaluation = evaluateHand(handCards, communityCards);
+        
+        // Базовая оценка от комбинации
+        let baseScore = evaluation.score / 900;
+        
+        // Бонус за высокие карты
+        const highCards = allCards.filter(c => c.numericValue >= 9).length;
+        baseScore += highCards * 0.03;
+
+        // Бонус за пару в руке
+        if (handCards.length === 2) {
+            if (handCards[0].value === handCards[1].value) {
+                baseScore += 0.15;
+            }
+            if (handCards.some(c => c.numericValue >= 10)) {
+                baseScore += 0.1;
+            }
+        }
+
+        return Math.min(baseScore, 1);
+    }
+
+    // Анализ поведения игрока
+    analyzePlayer(action) {
+        this.memory.totalRounds++;
+        if (action === 'fold') {
+            this.memory.playerFolds++;
+        } else if (action === 'raise') {
+            this.memory.playerRaises++;
+        }
+    }
+
+    // Получение статистики игрока
+    getPlayerTendency() {
+        if (this.memory.totalRounds < 3) return 'unknown';
+        const foldRate = this.memory.playerFolds / this.memory.totalRounds;
+        if (foldRate > 0.4) return 'passive';
+        if (foldRate < 0.2) return 'aggressive';
+        return 'normal';
+    }
+
+    // Решение бота
+    decide(handCards, communityCards, gameState) {
+        const handStrength = this.evaluateHandStrength(handCards, communityCards);
+        const aggression = this.aggression[this.difficulty];
+        const bluffChance = this.bluffChance[this.difficulty];
+        const playerTendency = this.getPlayerTendency();
+        
+        const callAmount = gameState.currentBet - gameState.botBet;
+        const potOdds = callAmount / (gameState.pot + callAmount);
+        
+        // Случайный фактор
+        const random = Math.random();
+        
+        // Блеф
+        const shouldBluff = random < bluffChance && handStrength < 0.4;
+        
+        // Эффективная сила руки (с учётом блефа)
+        const effectiveStrength = shouldBluff ? 0.7 : handStrength;
+
+        // Адаптация под стиль игрока
+        let adjustedAggression = aggression;
+        if (playerTendency === 'passive') {
+            adjustedAggression += 0.15;
+        } else if (playerTendency === 'aggressive') {
+            adjustedAggression -= 0.1;
+        }
+
+        // Принятие решения
+        let action = 'fold';
+        let confidence = 0;
+
+        if (effectiveStrength > 0.75) {
+            // Очень сильная рука
+            action = random > 0.3 ? 'raise' : 'call';
+            confidence = 0.9;
+        } else if (effectiveStrength > 0.55) {
+            // Сильная рука
+            action = random > (1 - adjustedAggression) ? 'raise' : 'call';
+            confidence = 0.7;
+        } else if (effectiveStrength > 0.35) {
+            // Средняя рука
+            if (callAmount === 0) {
+                action = 'check';
+            } else if (potOdds < 0.3 || random > (1 - adjustedAggression * 0.5)) {
+                action = 'call';
+            } else {
+                action = 'fold';
+            }
+            confidence = 0.5;
+        } else {
+            // Слабая рука
+            if (callAmount === 0) {
+                action = 'check';
+            } else if (shouldBluff && random > 0.5) {
+                action = 'raise';
+                confidence = 0.3;
+            } else if (callAmount < 20 && random > 0.7) {
+                action = 'call';
+            } else {
+                action = 'fold';
+            }
+            confidence = 0.2;
+        }
+
+        // Экспертный уровень - больше анализа
+        if (this.difficulty === 'expert') {
+            // Учитываем позицию и размер банка
+            if (gameState.pot > 500 && effectiveStrength > 0.5) {
+                action = 'raise';
+            }
+        }
+
+        return { action, confidence, handStrength };
+    }
+
+    // Размер ставки для raise
+    calculateRaiseAmount(gameState, handStrength) {
+        const baseRaise = Math.floor(gameState.pot * 0.5);
+        const strengthMultiplier = handStrength * 2;
+        const randomFactor = 0.8 + Math.random() * 0.4;
+        
+        let raise = Math.floor(baseRaise * strengthMultiplier * randomFactor);
+        raise = Math.max(20, Math.min(raise, gameState.botBalance));
+        
+        return raise;
+    }
+}
+
 // ===== МЕНЕДЖЕР СТАТИСТИКИ =====
 class StatsManager {
     constructor() {
@@ -131,33 +280,73 @@ class StatsManager {
     }
 
     load() {
-        const saved = localStorage.getItem('pokerStats');
+        const saved = localStorage.getItem('pokerProStats');
         return saved ? JSON.parse(saved) : {
             games: 0,
             wins: 0,
             losses: 0,
+            draws: 0,
             biggestWin: 0,
             totalWon: 0,
-            balance: 1000
+            totalLost: 0,
+            balance: 1000,
+            xp: 0,
+            level: 1,
+            bestHand: '-',
+            achievements: [],
+            dailyBonus: {
+                lastClaim: 0,
+                streak: 0
+            }
         };
     }
 
     save() {
-        localStorage.setItem('pokerStats', JSON.stringify(this.data));
+        localStorage.setItem('pokerProStats', JSON.stringify(this.data));
     }
 
-    addGame(won, amount) {
+    addGame(won, amount, handName) {
         this.data.games++;
-        if (won) {
+        if (won > 0) {
             this.data.wins++;
+            this.data.totalWon += amount;
             if (amount > this.data.biggestWin) {
                 this.data.biggestWin = amount;
             }
-            this.data.totalWon += amount;
-        } else {
+            this.addXP(50);
+        } else if (won < 0) {
             this.data.losses++;
+            this.data.totalLost += Math.abs(amount);
+        } else {
+            this.data.draws++;
         }
+        
+        if (handName && this.data.bestHand === '-') {
+            this.data.bestHand = handName;
+        }
+        
+        this.checkAchievements();
         this.save();
+    }
+
+    addXP(amount) {
+        this.data.xp += amount;
+        const xpNeeded = this.data.level * 100;
+        if (this.data.xp >= xpNeeded) {
+            this.data.xp -= xpNeeded;
+            this.data.level++;
+            return true; // Level up!
+        }
+        return false;
+    }
+
+    getWinRate() {
+        if (this.data.games === 0) return 0;
+        return Math.round((this.data.wins / this.data.games) * 100);
+    }
+
+    getProfit() {
+        return this.data.totalWon - this.data.totalLost;
     }
 
     updateBalance(balance) {
@@ -165,9 +354,118 @@ class StatsManager {
         this.save();
     }
 
-    getWinRate() {
-        if (this.data.games === 0) return 0;
-        return Math.round((this.data.wins / this.data.games) * 100);
+    checkAchievements() {
+        const achievements = [
+            { id: 'first_win', name: 'Первая победа', condition: () => this.data.wins >= 1, reward: 100 },
+            { id: 'win_10', name: 'Десять побед', condition: () => this.data.wins >= 10, reward: 500 },
+            { id: 'win_50', name: 'Пятидесяти побед', condition: () => this.data.wins >= 50, reward: 2000 },
+            { id: 'big_win', name: 'Крупный выигрыш', condition: () => this.data.biggestWin >= 500, reward: 300 },
+            { id: 'games_100', name: 'Опытный игрок', condition: () => this.data.games >= 100, reward: 1000 }
+        ];
+
+        achievements.forEach(ach => {
+            if (!this.data.achievements.includes(ach.id) && ach.condition()) {
+                this.data.achievements.push(ach.id);
+                this.data.balance += ach.reward;
+                showToast(`🏆 Достижение: ${ach.name}! +${ach.reward}$`, 'success');
+            }
+        });
+    }
+
+    checkDailyBonus() {
+        const now = Date.now();
+        const lastDay = this.data.dailyBonus.lastClaim;
+        const dayMs = 24 * 60 * 60 * 1000;
+        
+        if (now - lastDay >= dayMs) {
+            return true;
+        }
+        return false;
+    }
+
+    claimDailyBonus() {
+        const now = Date.now();
+        const lastDay = this.data.dailyBonus.lastClaim;
+        const dayMs = 24 * 60 * 60 * 1000;
+        
+        if (now - lastDay >= dayMs) {
+            this.data.dailyBonus.streak++;
+            this.data.dailyBonus.lastClaim = now;
+            const bonus = 100 * this.data.dailyBonus.streak;
+            this.data.balance += bonus;
+            this.save();
+            return bonus;
+        }
+        return 0;
+    }
+}
+
+// ===== МЕНЕДЖЕР АНИМАЦИЙ ФОНА =====
+class BackgroundAnimation {
+    constructor() {
+        this.canvas = document.getElementById('bg-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.particles = [];
+        this.resize();
+        this.init();
+        this.animate();
+        
+        window.addEventListener('resize', () => this.resize());
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    init() {
+        const particleCount = Math.floor(window.innerWidth / 15);
+        for (let i = 0; i < particleCount; i++) {
+            this.particles.push({
+                x: Math.random() * this.canvas.width,
+                y: Math.random() * this.canvas.height,
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.5,
+                size: Math.random() * 3 + 1,
+                opacity: Math.random() * 0.5 + 0.2
+            });
+        }
+    }
+
+    animate() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        this.particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            
+            if (p.x < 0 || p.x > this.canvas.width) p.vx *= -1;
+            if (p.y < 0 || p.y > this.canvas.height) p.vy *= -1;
+            
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            this.ctx.fillStyle = `rgba(0, 212, 255, ${p.opacity})`;
+            this.ctx.fill();
+        });
+
+        // Соединительные линии
+        this.particles.forEach((p1, i) => {
+            this.particles.slice(i + 1).forEach(p2 => {
+                const dx = p1.x - p2.x;
+                const dy = p1.y - p2.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < 100) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(p1.x, p1.y);
+                    this.ctx.lineTo(p2.x, p2.y);
+                    this.ctx.strokeStyle = `rgba(0, 212, 255, ${0.1 * (1 - dist / 100)})`;
+                    this.ctx.stroke();
+                }
+            });
+        });
+
+        requestAnimationFrame(() => this.animate());
     }
 }
 
@@ -175,6 +473,8 @@ class StatsManager {
 const soundManager = new SoundManager();
 const vibrationManager = new VibrationManager();
 const statsManager = new StatsManager();
+const botAI = new BotAI('medium');
+let bgAnimation = null;
 
 // ===== СОСТОЯНИЕ ИГРЫ =====
 const gameState = {
@@ -191,7 +491,8 @@ const gameState = {
     playerFolded: false,
     botFolded: false,
     deck: [],
-    lastBetter: 'player'
+    lastBetter: 'player',
+    fastMode: false
 };
 
 // ===== КАРТЫ =====
@@ -229,17 +530,15 @@ function dealCard(deck) {
 // ===== ОТРИСОВКА =====
 function renderCard(card, container, hidden = false, delay = 0) {
     const el = document.createElement('div');
-    if (hidden) {
-        el.className = 'card back';
-    } else {
-        el.className = `card ${card.color}`;
+    el.className = `card ${hidden ? 'card-back' : card.color} dealing`;
+    if (!hidden) {
         el.innerText = `${card.value}${card.suit}`;
     }
     el.style.animationDelay = `${delay}ms`;
     container.appendChild(el);
     
     if (!hidden) {
-        setTimeout(() => soundManager.playCardDeal(), delay);
+        setTimeout(() => soundManager.play('card'), delay);
     }
 }
 
@@ -250,7 +549,7 @@ function renderPlayerCards() {
 }
 
 function renderBotCards(hidden = true) {
-    const container = document.getElementById('opponent-cards');
+    const container = document.getElementById('bot-cards');
     container.innerHTML = '';
     gameState.botCards.forEach((card, i) => renderCard(card, container, hidden, i * 150));
 }
@@ -263,18 +562,23 @@ function renderCommunityCards() {
 
 // ===== УПРАВЛЕНИЕ ИГРОЙ =====
 function startGame() {
-    soundManager.playButtonClick();
+    soundManager.play('click');
     vibrationManager.light();
     
     document.getElementById('main-menu').classList.remove('active');
     document.getElementById('game-table').classList.add('active');
+    document.getElementById('loading-screen').classList.remove('active');
+    
+    if (!bgAnimation) {
+        bgAnimation = new BackgroundAnimation();
+    }
     
     updateStatsDisplay();
     startNewRound();
 }
 
 function exitGame() {
-    soundManager.playButtonClick();
+    soundManager.play('click');
     vibrationManager.light();
     
     document.getElementById('game-table').classList.remove('active');
@@ -285,7 +589,6 @@ function exitGame() {
 }
 
 function startNewRound() {
-    // Сброс
     gameState.deck = shuffleDeck(createDeck());
     gameState.playerCards = [dealCard(gameState.deck), dealCard(gameState.deck)];
     gameState.botCards = [dealCard(gameState.deck), dealCard(gameState.deck)];
@@ -299,7 +602,6 @@ function startNewRound() {
     gameState.botFolded = false;
     gameState.lastBetter = 'player';
 
-    // Блайнды
     const smallBlind = 10;
     const bigBlind = 20;
     
@@ -310,45 +612,82 @@ function startNewRound() {
     gameState.pot = smallBlind + bigBlind;
     gameState.currentBet = bigBlind;
 
-    // UI
     renderPlayerCards();
     renderBotCards(true);
     renderCommunityCards();
     updateUI();
     
-    setStage('Префлоп');
-    document.getElementById('hand-rank').innerText = '';
+    updateStage('preflop');
+    document.getElementById('hand-name').innerText = '';
+    document.getElementById('strength-fill').style.width = '0%';
+    document.getElementById('strength-value').innerText = '0%';
     hideActionBubbles();
+    clearActionLog();
     
     enableControls(true);
+    addToLog('Новая раздача. Ваши карты сданы.');
     showToast('Новая раздача!', 'info');
 }
 
-function setStage(name) {
-    document.getElementById('stage-display').querySelector('.stage-text').innerText = name;
+function updateStage(stage) {
+    const stages = ['preflop', 'flop', 'turn', 'river', 'showdown'];
+    const names = ['ПРЕФЛОП', 'ФЛОП', 'ТЁРН', 'РИВЕР', 'ВСКРЫТИЕ'];
+    
+    document.querySelectorAll('.stage-dot').forEach((dot, i) => {
+        dot.classList.remove('active', 'completed');
+        if (stages.indexOf(stage) > i) {
+            dot.classList.add('completed');
+        } else if (stages.indexOf(stage) === i) {
+            dot.classList.add('active');
+        }
+    });
+    
+    document.getElementById('stage-name').innerText = names[stages.indexOf(stage)];
 }
 
 function updateUI() {
-    document.getElementById('pot').innerText = gameState.pot;
-    document.getElementById('player-balance').innerText = gameState.balance;
-    document.getElementById('bot-balance').innerText = gameState.botBalance;
+    document.getElementById('pot-value').innerText = `${gameState.pot} $`;
+    document.getElementById('player-chips').innerText = gameState.balance;
+    document.getElementById('bot-chips').innerText = gameState.botBalance;
     
-    // Обновляем слайдер
     const slider = document.getElementById('bet-slider');
-    slider.max = Math.min(gameState.balance, gameState.pot * 2);
-    slider.value = Math.min(50, slider.max);
-    document.getElementById('bet-slider-value').innerText = slider.value;
-    document.getElementById('confirm-bet-amount').innerText = slider.value;
+    const maxBet = Math.min(gameState.balance, gameState.pot * 2 || 500);
+    slider.max = maxBet;
+    slider.value = Math.min(50, maxBet);
+    document.getElementById('bet-max-value').innerText = maxBet;
+    document.getElementById('bet-current-amount').innerText = `${slider.value} $`;
+    document.getElementById('confirm-amount').innerText = slider.value;
+    
+    // Обновляем оценку руки
+    updateHandEvaluation();
+}
+
+function updateHandEvaluation() {
+    if (gameStage.communityCards.length >= 3) {
+        const eval = evaluateHand(gameState.playerCards, gameState.communityCards);
+        const strength = Math.min((eval.score / 900) * 100, 100);
+        
+        document.getElementById('hand-name').innerText = eval.name;
+        document.getElementById('strength-fill').style.width = `${strength}%`;
+        document.getElementById('strength-value').innerText = `${Math.round(strength)}%`;
+        document.getElementById('hand-evaluation').classList.add('active');
+    } else {
+        document.getElementById('hand-evaluation').classList.remove('active');
+    }
 }
 
 function updateStatsDisplay() {
-    document.getElementById('menu-balance').innerText = gameState.balance;
+    document.getElementById('menu-balance').innerText = statsManager.data.balance;
     document.getElementById('menu-wins').innerText = statsManager.data.wins;
-    document.getElementById('menu-games').innerText = statsManager.data.games;
+    document.getElementById('menu-winrate').innerText = statsManager.getWinRate() + '%';
+    document.getElementById('player-level').innerText = statsManager.data.level;
+    document.getElementById('xp-current').innerText = statsManager.data.xp;
+    document.getElementById('xp-max').innerText = statsManager.data.level * 100;
+    document.getElementById('xp-fill').style.width = `${(statsManager.data.xp / (statsManager.data.level * 100)) * 100}%`;
 }
 
 function enableControls(enabled) {
-    const buttons = document.querySelectorAll('#game-controls .control-btn');
+    const buttons = document.querySelectorAll('#action-buttons .action-btn');
     buttons.forEach(btn => btn.disabled = !enabled);
 }
 
@@ -356,19 +695,22 @@ function enableControls(enabled) {
 function playerAction(action) {
     if (gameState.playerFolded) return;
 
-    soundManager.playButtonClick();
+    soundManager.play('click');
     vibrationManager.light();
 
     showActionBubble('player', action.toUpperCase());
+    botAI.analyzePlayer(action);
 
     switch(action) {
         case 'fold':
             gameState.playerFolded = true;
             vibrationManager.error();
+            addToLog('Вы сбросили карты');
             setTimeout(() => {
                 gameState.botBalance += gameState.pot;
+                statsManager.addGame(-1, 0, null);
                 showResult(false, 0, 'Сброс');
-            }, 1000);
+            }, gameState.fastMode ? 500 : 1000);
             break;
 
         case 'check':
@@ -376,33 +718,34 @@ function playerAction(action) {
                 playerAction('call');
                 return;
             }
-            setTimeout(() => botTurn(), 800);
+            addToLog('Вы сделали чек');
+            setTimeout(() => botTurn(), gameState.fastMode ? 300 : 800);
             break;
 
         case 'call':
             const callAmount = gameState.currentBet - gameState.playerBet;
             if (gameState.balance >= callAmount) {
-                soundManager.playChip();
+                soundManager.play('chip');
                 gameState.balance -= callAmount;
                 gameState.playerBet += callAmount;
                 gameState.pot += callAmount;
+                addToLog(`Вы уравняли ${callAmount}$`);
                 updateUI();
-                setTimeout(() => botTurn(), 800);
+                setTimeout(() => botTurn(), gameState.fastMode ? 300 : 800);
             }
             break;
     }
 }
 
-function showBetSlider() {
-    soundManager.playButtonClick();
-    document.getElementById('bet-slider-container').style.display = 'block';
-    document.getElementById('game-controls').style.display = 'none';
-    document.getElementById('confirm-bet-btn').style.display = 'flex';
+function showBetPanel() {
+    soundManager.play('click');
+    document.getElementById('bet-panel').classList.add('active');
+    document.getElementById('action-buttons').style.display = 'none';
+    document.getElementById('confirm-bet').classList.add('active');
     
-    // Обновляем значение при изменении
     document.getElementById('bet-slider').addEventListener('input', (e) => {
-        document.getElementById('bet-slider-value').innerText = e.target.value;
-        document.getElementById('confirm-bet-amount').innerText = e.target.value;
+        document.getElementById('bet-current-amount').innerText = `${e.target.value} $`;
+        document.getElementById('confirm-amount').innerText = e.target.value;
     });
 }
 
@@ -417,7 +760,7 @@ function placeBet() {
         return;
     }
 
-    soundManager.playRaise();
+    soundManager.play('chip');
     vibrationManager.medium();
     
     gameState.balance -= toAdd;
@@ -427,90 +770,67 @@ function placeBet() {
     
     updateUI();
     
-    document.getElementById('bet-slider-container').style.display = 'none';
-    document.getElementById('game-controls').style.display = 'grid';
-    document.getElementById('confirm-bet-btn').style.display = 'none';
+    document.getElementById('bet-panel').classList.remove('active');
+    document.getElementById('action-buttons').style.display = 'grid';
+    document.getElementById('confirm-bet').classList.remove('active');
     
-    showActionBubble('player', `RAISE $${betAmount}`);
+    showActionBubble('player', `RAISE ${betAmount}$`);
+    addToLog(`Вы подняли до ${gameState.currentBet}$`);
     
-    setTimeout(() => botTurn(), 800);
+    setTimeout(() => botTurn(), gameState.fastMode ? 300 : 800);
 }
 
 // ===== ХОД БОТА =====
 function botTurn() {
     enableControls(false);
     showActionBubble('bot', 'Думает...');
+    document.getElementById('bot-status').classList.add('thinking');
+
+    const thinkTime = gameState.fastMode ? 500 : (1000 + Math.random() * 1000);
 
     setTimeout(() => {
+        document.getElementById('bot-status').classList.remove('thinking');
         hideActionBubble('bot');
         
-        // Умная логика бота
-        const botHandStrength = evaluateHandStrength(gameState.botCards, gameState.communityCards);
-        const random = Math.random();
-        const callAmount = gameState.currentBet - gameState.botBet;
-        
-        let action = 'fold';
-        
-        // Сильная рука
-        if (botHandStrength > 0.7) {
-            if (random > 0.3 && gameState.botBalance >= 50) {
-                action = 'raise';
-            } else {
-                action = 'call';
-            }
-        }
-        // Средняя рука
-        else if (botHandStrength > 0.4) {
-            if (random > 0.5) {
-                action = 'call';
-            } else if (callAmount <= 20) {
-                action = 'call';
-            }
-        }
-        // Слабая рука
-        else {
-            if (callAmount <= 10 && random > 0.7) {
-                action = 'call';
-            }
-        }
-        
-        // Если чек возможен
-        if (callAmount === 0 && action !== 'raise') {
-            action = 'check';
-        }
+        const decision = botAI.decide(gameState.botCards, gameState.communityCards, gameState);
+        const { action, confidence } = decision;
 
-        // Выполнение действия
         switch(action) {
             case 'fold':
                 gameState.botFolded = true;
                 showActionBubble('bot', 'FOLD');
                 vibrationManager.success();
+                addToLog('Бот сбросил карты');
                 setTimeout(() => {
                     gameState.balance += gameState.pot;
+                    statsManager.addGame(1, gameState.pot, null);
                     showResult(true, gameState.pot, 'Бот сбросил');
-                }, 1000);
+                }, gameState.fastMode ? 500 : 1000);
                 return;
                 
             case 'check':
-                soundManager.playChip();
+                soundManager.play('chip');
                 showActionBubble('bot', 'CHECK');
+                addToLog('Бот сделал чек');
                 nextStage();
                 break;
                 
             case 'call':
-                soundManager.playChip();
+                const callAmount = gameState.currentBet - gameState.botBet;
+                soundManager.play('chip');
                 gameState.botBalance -= callAmount;
                 gameState.botBet += callAmount;
                 gameState.pot += callAmount;
-                showActionBubble('bot', `CALL $${callAmount}`);
+                showActionBubble('bot', `CALL ${callAmount}$`);
+                addToLog(`Бот уравнял ${callAmount}$`);
                 updateUI();
                 nextStage();
                 break;
                 
             case 'raise':
-                soundManager.playRaise();
+                soundManager.play('chip');
                 vibrationManager.medium();
-                const raiseAmount = Math.floor(Math.random() * 50) + 30;
+                const raiseAmount = botAI.calculateRaiseAmount(gameState, decision.handStrength);
                 const totalRaise = gameState.currentBet + raiseAmount;
                 const toAdd = totalRaise - gameState.botBet;
                 
@@ -519,34 +839,23 @@ function botTurn() {
                     gameState.botBet += toAdd;
                     gameState.pot += toAdd;
                     gameState.currentBet = gameState.botBet;
-                    showActionBubble('bot', `RAISE $${raiseAmount}`);
+                    showActionBubble('bot', `RAISE ${raiseAmount}$`);
+                    addToLog(`Бот поднял до ${gameState.currentBet}$`);
                     updateUI();
                     enableControls(true);
-                    showToast(`Бот поднял до $${gameState.currentBet}!`, 'info');
+                    showToast(`Бот поднял до ${gameState.currentBet}$!`, 'warning');
                 } else {
-                    // Олл-ин
                     gameState.pot += gameState.botBalance;
                     gameState.currentBet = gameState.botBet + gameState.botBalance;
                     gameState.botBalance = 0;
                     showActionBubble('bot', 'ALL-IN!');
+                    addToLog('Бот идёт ALL-IN!');
                     updateUI();
                     enableControls(true);
                 }
                 break;
         }
-    }, 1000 + Math.random() * 500);
-}
-
-// ===== ОЦЕНКА СИЛЫ РУКИ =====
-function evaluateHandStrength(handCards, communityCards) {
-    const allCards = [...handCards, ...communityCards];
-    if (allCards.length < 5) return 0.3;
-    
-    const evaluation = evaluateHand(handCards, communityCards);
-    
-    // Нормализуем score к 0-1
-    const normalized = Math.min(evaluation.score / 800, 1);
-    return normalized;
+    }, thinkTime);
 }
 
 // ===== ЭТАПЫ ИГРЫ =====
@@ -557,27 +866,30 @@ function nextStage() {
             gameState.communityCards.push(dealCard(gameState.deck));
             gameState.communityCards.push(dealCard(gameState.deck));
             gameState.communityCards.push(dealCard(gameState.deck));
-            setStage('Флоп');
-            soundManager.playCardDeal();
+            updateStage('flop');
+            soundManager.play('card');
+            addToLog('Флоп: 3 карты на столе');
             break;
 
         case 'flop':
             gameState.stage = 'turn';
             gameState.communityCards.push(dealCard(gameState.deck));
-            setStage('Тёрн');
-            soundManager.playCardDeal();
+            updateStage('turn');
+            soundManager.play('card');
+            addToLog('Тёрн: 4 карта');
             break;
 
         case 'turn':
             gameState.stage = 'river';
             gameState.communityCards.push(dealCard(gameState.deck));
-            setStage('Ривер');
-            soundManager.playCardDeal();
+            updateStage('river');
+            soundManager.play('card');
+            addToLog('Ривер: 5 карта');
             break;
 
         case 'river':
             gameState.stage = 'showdown';
-            setStage('Вскрытие');
+            updateStage('showdown');
             showdown();
             return;
     }
@@ -593,50 +905,51 @@ function nextStage() {
 // ===== ВСКРЫТИЕ =====
 function showdown() {
     renderBotCards(false);
-    soundManager.playCardFlip();
+    soundManager.play('card');
     vibrationManager.medium();
+    addToLog('Вскрытие!');
 
     const playerRank = evaluateHand(gameState.playerCards, gameState.communityCards);
     const botRank = evaluateHand(gameState.botCards, gameState.communityCards);
 
-    document.getElementById('hand-rank').innerText = playerRank.name;
-
     setTimeout(() => {
-        let won = false;
+        let won = 0;
         let amount = 0;
         let title = '';
         let subtitle = playerRank.name;
 
         if (playerRank.score > botRank.score) {
-            won = true;
+            won = 1;
             amount = gameState.pot;
             gameState.balance += gameState.pot;
             title = 'ПОБЕДА!';
-            soundManager.playWin();
+            soundManager.play('win');
             vibrationManager.success();
+            addToLog(`Вы выиграли с ${playerRank.name}!`);
         } else if (playerRank.score < botRank.score) {
-            won = false;
+            won = -1;
             amount = 0;
             title = 'ПОРАЖЕНИЕ';
             subtitle = botRank.name;
-            soundManager.playLose();
+            soundManager.play('lose');
             vibrationManager.error();
+            addToLog(`Бот выиграл с ${botRank.name}`);
         } else {
-            // Ничья
-            won = true;
+            won = 0;
             amount = Math.floor(gameState.pot / 2);
             gameState.balance += amount;
             title = 'НИЧЬЯ!';
             subtitle = 'Разделен банк';
-            soundManager.playChip();
+            soundManager.play('chip');
+            addToLog('Ничья! Банк разделён');
         }
 
-        statsManager.addGame(won && playerRank.score >= botRank.score, amount);
+        statsManager.addGame(won, won === 1 ? amount : -gameState.playerBet, playerRank.name);
         updateUI();
         updateStatsDisplay();
         
-        showResult(won && playerRank.score >= botRank.score, amount, subtitle, title);
-    }, 1500);
+        showResult(won >= 0, won === 1 ? amount : 0, subtitle, title);
+    }, gameState.fastMode ? 1000 : 2000);
 }
 
 // ===== ОЦЕНКА КОМБИНАЦИЙ =====
@@ -656,7 +969,6 @@ function evaluateHand(handCards, communityCards) {
     const maxCount = counts[0] || 0;
     const hasFlush = Object.values(suitCount).some(count => count >= 5);
     
-    // Проверка стрита
     const uniqueValues = [...new Set(numericValues)];
     let hasStraight = false;
     for (let i = 0; i <= uniqueValues.length - 5; i++) {
@@ -665,7 +977,6 @@ function evaluateHand(handCards, communityCards) {
             break;
         }
     }
-    // Особый случай: A-2-3-4-5
     if (uniqueValues.includes(12) && uniqueValues.includes(0) && uniqueValues.includes(1) && 
         uniqueValues.includes(2) && uniqueValues.includes(3)) {
         hasStraight = true;
@@ -700,7 +1011,6 @@ function evaluateHand(handCards, communityCards) {
         name = 'Пара';
     }
 
-    // Бонус за старшие карты
     score += numericValues.filter(v => v >= 10).length * 5;
 
     return { score, name };
@@ -709,21 +1019,24 @@ function evaluateHand(handCards, communityCards) {
 // ===== РЕЗУЛЬТАТ =====
 function showResult(won, amount, subtitle, title = null) {
     const modal = document.getElementById('result-modal');
-    const icon = document.getElementById('result-icon');
+    const icon = modal.querySelector('.trophy-icon');
     const resultTitle = document.getElementById('result-title');
     
-    modal.className = 'result-modal active ' + (won ? 'win' : 'lose');
+    modal.classList.add('active', won ? 'win' : 'lose');
     icon.innerText = won ? '🏆' : '💔';
     resultTitle.innerText = title || (won ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ');
-    document.getElementById('result-subtitle').innerText = subtitle;
-    document.getElementById('result-amount').innerText = won ? `+$${amount}` : '-$' + (gameState.currentBet || 20);
+    document.getElementById('result-hand').innerText = subtitle;
+    document.getElementById('result-amount').innerText = won ? `+${amount} $` : `-${Math.abs(amount)} $`;
+    document.getElementById('result-xp').innerText = won ? '+50 XP' : '+10 XP';
     
-    statsManager.updateBalance(gameState.balance);
+    if (won) {
+        createConfetti();
+    }
 }
 
 function closeResult() {
-    document.getElementById('result-modal').classList.remove('active');
-    soundManager.playButtonClick();
+    document.getElementById('result-modal').classList.remove('active', 'win', 'lose');
+    soundManager.play('click');
     
     if (gameState.balance <= 0) {
         showToast('Баланс пуст! Восстанавливаем...', 'info');
@@ -739,9 +1052,28 @@ function closeResult() {
     startNewRound();
 }
 
+function createConfetti() {
+    const container = document.getElementById('confetti');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.style.cssText = `
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: hsl(${Math.random() * 360}, 100%, 50%);
+            left: ${Math.random() * 100}%;
+            top: -10px;
+            animation: confettiFall ${1 + Math.random() * 2}s linear forwards;
+        `;
+        container.appendChild(confetti);
+    }
+}
+
 // ===== МОДАЛЬНЫЕ ОКНА =====
 function showSettings() {
-    soundManager.playButtonClick();
+    soundManager.play('click');
     document.getElementById('settings-modal').classList.add('active');
 }
 
@@ -750,13 +1082,16 @@ function hideSettings() {
 }
 
 function showStats() {
-    soundManager.playButtonClick();
+    soundManager.play('click');
     document.getElementById('stats-games').innerText = statsManager.data.games;
     document.getElementById('stats-wins').innerText = statsManager.data.wins;
-    document.getElementById('stats-losses').innerText = statsManager.data.losses;
     document.getElementById('stats-winrate').innerText = statsManager.getWinRate() + '%';
-    document.getElementById('stats-biggest-win').innerText = '$' + statsManager.data.biggestWin;
-    document.getElementById('stats-total-won').innerText = '$' + statsManager.data.totalWon;
+    document.getElementById('stats-profit').innerText = (statsManager.getProfit() >= 0 ? '+' : '') + statsManager.getProfit() + '$';
+    document.getElementById('stats-biggest-win').innerText = statsManager.data.biggestWin + '$';
+    document.getElementById('stats-total-won').innerText = statsManager.data.totalWon + '$';
+    document.getElementById('stats-total-lost').innerText = statsManager.data.totalLost + '$';
+    document.getElementById('stats-best-hand').innerText = statsManager.data.bestHand;
+    document.getElementById('stats-avg-pot').innerText = Math.round(statsManager.data.totalWon / (statsManager.data.wins || 1)) + '$';
     document.getElementById('stats-modal').classList.add('active');
 }
 
@@ -764,54 +1099,94 @@ function hideStats() {
     document.getElementById('stats-modal').classList.remove('active');
 }
 
-function showRules() {
-    soundManager.playButtonClick();
-    document.getElementById('rules-modal').classList.add('active');
+function showAchievements() {
+    soundManager.play('click');
+    const achievements = [
+        { id: 'first_win', name: 'Первая победа', desc: 'Выиграть 1 игру', icon: '🥉' },
+        { id: 'win_10', name: 'Десять побед', desc: 'Выиграть 10 игр', icon: '🥈' },
+        { id: 'win_50', name: 'Пятидесяти побед', desc: 'Выиграть 50 игр', icon: '🥇' },
+        { id: 'big_win', name: 'Крупный выигрыш', desc: 'Выиграть 500$ за раз', icon: '💰' },
+        { id: 'games_100', name: 'Опытный игрок', desc: 'Сыграть 100 игр', icon: '🎯' }
+    ];
+    
+    const list = document.getElementById('achievements-list');
+    list.innerHTML = '';
+    
+    let unlocked = 0;
+    achievements.forEach(ach => {
+        const isUnlocked = statsManager.data.achievements.includes(ach.id);
+        if (isUnlocked) unlocked++;
+        
+        list.innerHTML += `
+            <div class="achievement-item">
+                <div class="achievement-icon">${ach.icon}</div>
+                <div class="achievement-info">
+                    <div class="achievement-name">${ach.name}</div>
+                    <div class="achievement-desc">${ach.desc}</div>
+                </div>
+                <div class="achievement-status ${isUnlocked ? 'unlocked' : 'locked'}">
+                    ${isUnlocked ? '✓' : '🔒'}
+                </div>
+            </div>
+        `;
+    });
+    
+    document.getElementById('achievements-percent').innerText = Math.round((unlocked / achievements.length) * 100) + '%';
+    document.getElementById('achievements-fill').style.width = `${(unlocked / achievements.length) * 100}%`;
+    document.getElementById('achievements-modal').classList.add('active');
 }
 
-function hideRules() {
-    document.getElementById('rules-modal').classList.remove('active');
+function hideAchievements() {
+    document.getElementById('achievements-modal').classList.remove('active');
+}
+
+function showDailyBonus() {
+    soundManager.play('click');
+    if (statsManager.checkDailyBonus()) {
+        document.getElementById('bonus-modal').classList.add('active');
+    } else {
+        showToast('Бонус уже получен сегодня!', 'info');
+    }
+}
+
+function hideDailyBonus() {
+    document.getElementById('bonus-modal').classList.remove('active');
+}
+
+function claimBonus() {
+    const bonus = statsManager.claimDailyBonus();
+    soundManager.play('win');
+    vibrationManager.success();
+    showToast(`Получено ${bonus}$ бонуса!`, 'success');
+    hideDailyBonus();
+    updateStatsDisplay();
+}
+
+function showHelp() {
+    soundManager.play('click');
+    document.getElementById('help-modal').classList.add('active');
+}
+
+function hideHelp() {
+    document.getElementById('help-modal').classList.remove('active');
 }
 
 // ===== НАСТРОЙКИ =====
 function toggleSound() {
     const enabled = soundManager.toggle();
-    updateSoundIcon();
+    const icon = document.querySelector('#sound-btn i');
+    icon.className = enabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
     showToast(enabled ? 'Звук включён' : 'Звук выключен', 'info');
-}
-
-function toggleSoundSetting() {
-    soundManager.enabled = document.getElementById('sound-toggle').checked;
-    updateSoundIcon();
-}
-
-function updateSoundIcon() {
-    const onIcon = document.querySelector('.sound-on');
-    const offIcon = document.querySelector('.sound-off');
-    if (soundManager.enabled) {
-        onIcon.style.display = 'block';
-        offIcon.style.display = 'none';
-    } else {
-        onIcon.style.display = 'none';
-        offIcon.style.display = 'block';
-    }
-}
-
-function toggleVibrationSetting() {
-    vibrationManager.enabled = document.getElementById('vibration-toggle').checked;
-}
-
-function changeTheme(theme) {
-    document.body.className = 'theme-' + theme;
-    showToast('Тема изменена', 'info');
 }
 
 // ===== УТИЛИТЫ =====
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
+    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+    
     const toast = document.createElement('div');
-    toast.className = 'toast ' + type;
-    toast.innerText = message;
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<i class="fas ${icons[type]}"></i> <span>${message}</span>`;
     container.appendChild(toast);
     
     setTimeout(() => {
@@ -824,7 +1199,7 @@ function showActionBubble(who, text) {
     const id = who === 'player' ? 'player-action' : 'bot-action';
     const bubble = document.getElementById(id);
     bubble.innerText = text;
-    bubble.classList.add('show');
+    bubble.className = `player-action show ${text.toLowerCase()}`;
 }
 
 function hideActionBubble(who) {
@@ -837,16 +1212,73 @@ function hideActionBubbles() {
     hideActionBubble('bot');
 }
 
-// ===== ЗАКРЫТИЕ МОДАЛОК ПО КЛИКУ =====
-document.querySelectorAll('.modal-overlay').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.remove('active');
-        }
+function addToLog(message) {
+    const log = document.getElementById('action-log');
+    const entry = document.createElement('div');
+    entry.innerText = message;
+    log.prepend(entry);
+    
+    if (log.children.length > 3) {
+        log.removeChild(log.lastChild);
+    }
+}
+
+function clearActionLog() {
+    document.getElementById('action-log').innerHTML = '';
+}
+
+function joinTournament() {
+    showToast('Турниры скоро будут доступны!', 'info');
+}
+
+// ===== ЗАКРЫТИЕ МОДАЛОК =====
+document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('click', (e) => {
+        e.target.closest('.modal').classList.remove('active');
     });
 });
 
-// ===== ОНЛАЙН СТАТУС (фейк для атмосферы) =====
+// ===== НАСТРОЙКИ ИЗ МОДАЛКИ =====
+document.getElementById('sound-toggle').addEventListener('change', (e) => {
+    soundManager.enabled = e.target.checked;
+});
+
+document.getElementById('music-toggle').addEventListener('change', (e) => {
+    soundManager.toggleMusic();
+});
+
+document.getElementById('vibration-toggle').addEventListener('change', (e) => {
+    vibrationManager.enabled = e.target.checked;
+});
+
+document.getElementById('theme-select').addEventListener('change', (e) => {
+    document.body.className = 'theme-' + e.target.value;
+    showToast('Тема изменена', 'info');
+});
+
+document.getElementById('difficulty-select').addEventListener('change', (e) => {
+    botAI.setDifficulty(e.target.value);
+    showToast(`Сложность: ${e.target.options[e.target.selectedIndex].text}`, 'info');
+});
+
+document.getElementById('fast-mode-toggle').addEventListener('change', (e) => {
+    gameState.fastMode = e.target.checked;
+    showToast(e.target.checked ? 'Быстрый режим включён' : 'Быстрый режим выключен', 'info');
+});
+
+// ===== БЫСТРЫЕ СТАВКИ =====
+document.querySelectorAll('.quick-bet').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const slider = document.getElementById('bet-slider');
+        const percent = parseFloat(btn.dataset.percent);
+        slider.value = Math.floor(parseInt(slider.max) * percent);
+        document.getElementById('bet-current-amount').innerText = `${slider.value} $`;
+        document.getElementById('confirm-amount').innerText = slider.value;
+        soundManager.play('click');
+    });
+});
+
+// ===== ОНЛАЙН СТАТУС =====
 setInterval(() => {
     const count = document.getElementById('online-count');
     if (count) {
@@ -856,13 +1288,18 @@ setInterval(() => {
     }
 }, 5000);
 
-// ===== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ =====
+// ===== ЗАГРУЗКА =====
 window.addEventListener('load', () => {
-    updateStatsDisplay();
-    updateSoundIcon();
-    
-    // Показываем приветствие
     setTimeout(() => {
+        document.getElementById('loading-bar').style.width = '100%';
+    }, 100);
+    
+    setTimeout(() => {
+        document.getElementById('loading-screen').classList.remove('active');
+        document.getElementById('main-menu').classList.add('active');
+        bgAnimation = new BackgroundAnimation();
         showToast('Добро пожаловать в Poker Pro!', 'success');
-    }, 500);
+    }, 2000);
+    
+    updateStatsDisplay();
 });
