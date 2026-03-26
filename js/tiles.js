@@ -9,13 +9,11 @@ const TileRenderer = {
   },
 
   createMaterials() {
-    // Создаём переиспользуемые материалы для производительности
     Object.keys(MapGenerator.tileColors).forEach(type => {
       this.materials[type] = new THREE.MeshStandardMaterial({
         color: MapGenerator.tileColors[type],
         roughness: 0.7,
-        metalness: 0.3,
-        flatShading: false
+        metalness: 0.3
       });
     });
 
@@ -32,7 +30,9 @@ const TileRenderer = {
 
   clear() {
     this.tiles.forEach(mesh => {
-      this.scene.remove(mesh);
+      if (mesh.parent) {
+        mesh.parent.remove(mesh);
+      }
       if (mesh.geometry) mesh.geometry.dispose();
     });
     this.tiles.clear();
@@ -57,7 +57,6 @@ const TileRenderer = {
     mesh.receiveShadow = true;
 
     mesh.userData = { tileId: tile.id, tile: tile };
-    mesh.onClick = () => onSelect(tile);
 
     this.scene.add(mesh);
     this.tiles.set(tile.id, mesh);
