@@ -7,10 +7,7 @@
   <meta name="theme-color" content="#0f0f1a">
   <title>Territory War</title>
   
-  <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
-  <!-- Three.js (Стабильная версия) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   
   <link rel="stylesheet" href="css/style.css">
@@ -78,6 +75,11 @@
         <p id="game-over-message"></p>
         <button id="restart-btn" class="btn btn-primary">🔄 Заново</button>
       </div>
+      
+      <!-- Подсказка управления -->
+      <div id="controls-hint" class="ui-panel hidden">
+        <p>👆 Тап - выбор | ✌️ Два пальца - зум | 🖐️ Свайп - камера</p>
+      </div>
     </div>
     
     <!-- Главное меню -->
@@ -120,7 +122,6 @@
     </div>
   </div>
   
-  <!-- Скрипты игры -->
   <script src="js/sound.js"></script>
   <script src="js/store.js"></script>
   <script src="js/map.js"></script>
