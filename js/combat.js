@@ -7,110 +7,104 @@ const Combat = {
     water: 0
   },
 
-  calculateBattle(attackerTile, defenderTile, attackTroops) {
-    const defenseBonus = this.terrainBonus[defenderTile.type] || 1.0;
-    const attackPower = attackTroops;
-    const defensePower = defenderTile.troops * defenseBonus;
-
-    const attackerLoss = Math.floor(defensePower * 0.4);
-    const defenderLoss = Math.floor(attackPower * 0.6);
-
-    const remainingAttackers = attackTroops - attackerLoss;
-    const remainingDefenders = defenderTile.troops - defenderLoss;
-
-    const captured = remainingAttackers > remainingDefenders && remainingAttackers > 0;
-
+  calculateBattle(attacker, defender, troops) {
+    const bonus = this.terrainBonus[defender.type] || 1.0;
+    const atkLoss = Math.floor(defender.troops * bonus * 0.4);
+    const defLoss = Math.floor(troops * 0.6);
+    const remaining = troops - atkLoss;
+    const captured = remaining > (defender.troops - defLoss) && remaining > 0;
+    
     return {
-      attackerLoss: Math.min(attackerLoss, attackTroops),
-      defenderLoss: Math.min(defenderLoss, defenderTile.troops),
+      attackerLoss: Math.min(atkLoss, troops),
+      defenderLoss: Math.min(defLoss, defender.troops),
       captured,
-      remainingAttackers: captured ? Math.floor(remainingAttackers * 0.6) : 0
+      remainingAttackers: captured ? Math.floor(remaining * 0.6) : 0
     };
   },
 
-  performAttack(fromTileId, toTileId, troops) {
-    const fromTile = GameStore.getTile(fromTileId);
-    const toTile = GameStore.getTile(toTileId);
-
-    if (!fromTile || !toTile) {
+  performAttack(fromId, toId, troops) {
+    const from = GameStore.getTile(fromId);
+    const to = GameStore.getTile(toId);
+    
+    if (!from || !to) {
       return { success: false, message: 'Ошибка!' };
     }
-
-    if (fromTile.ownerId !== 'player') {
+    
+    if (from.ownerId !== 'player') {
       return { success: false, message: 'Не ваша территория!' };
     }
-
-    if (toTile.ownerId === 'player') {
+    
+    if (to.ownerId === 'player') {
       return { success: false, message: 'Нельзя атаковать себя!' };
     }
-
-    if (troops > fromTile.troops) {
+    
+    if (troops > from.troops) {
       return { success: false, message: 'Недостаточно войск!' };
     }
-
-    const result = this.calculateBattle(fromTile, toTile, troops);
-
-    GameStore.updateTile(fromTileId, {
-      troops: fromTile.troops - result.attackerLoss
+    
+    const result = this.calculateBattle(from, to, troops);
+    
+    GameStore.updateTile(fromId, {
+      troops: from.troops - result.attackerLoss
     });
-
-    GameStore.updateTile(toTileId, {
-      troops: Math.max(0, toTile.troops - result.defenderLoss)
+    
+    GameStore.updateTile(toId, {
+      troops: Math.max(0, to.troops - result.defenderLoss)
     });
-
+    
     if (result.captured) {
-      GameStore.updateTile(toTileId, {
-        ownerId: fromTile.ownerId,
+      GameStore.updateTile(toId, {
+        ownerId: from.ownerId,
         troops: result.remainingAttackers
       });
-
-      const annexed = this.checkAnnexation(toTile, fromTile.ownerId);
+      
+      const annexed = this.checkAnnexation(to, from.ownerId);
       
       return {
         success: true,
-        message: '🎉 Территория захвачена!',
+        message: '🎉 Захвачено!',
         captured: true,
         annexed
       };
     }
-
+    
     return {
       success: true,
-      message: '⚔️ Бой завершён',
+      message: '⚔️ Бой',
       captured: false,
       annexed: []
     };
   },
 
-  checkAnnexation(capturedTile, ownerId) {
+  checkAnnexation(tile, ownerId) {
     const annexed = [];
-
-    capturedTile.neighbors.forEach(neighborId => {
-      const neighbor = GameStore.getTile(neighborId);
-      if (neighbor && neighbor.ownerId !== ownerId && neighbor.ownerId !== null) {
-        if (this.isEncircled(neighbor, ownerId)) {
-          GameStore.updateTile(neighborId, {
-            ownerId: ownerId,
-            troops: Math.floor(neighbor.troops * 0.5)
+    
+    tile.neighbors.forEach(nid => {
+      const n = GameStore.getTile(nid);
+      if (n && n.ownerId && n.ownerId !== ownerId) {
+        if (this.isEncircled(n, ownerId)) {
+          GameStore.updateTile(nid, {
+            ownerId,
+            troops: Math.floor(n.troops * 0.5)
           });
-          annexed.push(neighborId);
+          annexed.push(nid);
         }
       }
     });
-
+    
     return annexed;
   },
 
   isEncircled(tile, ownerId) {
-    if (tile.ownerId === ownerId || !tile.ownerId) return false;
-
-    const passableNeighbors = tile.neighbors
+    if (tile.ownerId === ownerId || !tile.ownerId) {
+      return false;
+    }
+    
+    const passable = tile.neighbors
       .map(id => GameStore.getTile(id))
       .filter(t => t && t.type !== 'water');
-
-    if (passableNeighbors.length === 0) return false;
-
-    return passableNeighbors.every(t => t.ownerId === ownerId);
+    
+    return passable.length > 0 && passable.every(t => t.ownerId === ownerId);
   }
 };
 
