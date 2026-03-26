@@ -9,7 +9,6 @@ const TileRenderer = {
   },
 
   createMaterials() {
-    // Материалы местности
     Object.keys(MapGenerator.tileColors).forEach(type => {
       this.materials[type] = new THREE.MeshStandardMaterial({
         color: MapGenerator.tileColors[type],
@@ -18,7 +17,6 @@ const TileRenderer = {
       });
     });
     
-    // Материалы владельцев
     Object.keys(MapGenerator.ownerColors).forEach(owner => {
       this.materials[`owner_${owner}`] = new THREE.MeshStandardMaterial({
         color: MapGenerator.ownerColors[owner],
@@ -109,7 +107,6 @@ const TileRenderer = {
     
     const animate = () => {
       frames++;
-      
       if (growing) {
         scale += 0.05;
         if (scale >= 1.3) growing = false;
@@ -120,9 +117,7 @@ const TileRenderer = {
           return;
         }
       }
-      
       mesh.scale.set(scale, 1, scale);
-      
       if (frames < 40) {
         requestAnimationFrame(animate);
       }
