@@ -3,119 +3,412 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Telegram Poker</title>
-    <!-- Подключаем Telegram SDK -->
+    <title>Telegram Poker Pro</title>
+    
+    <!-- Telegram SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Подключаем наши стили -->
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Стили -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Анимированный фон -->
+    <div class="bg-animation">
+        <div class="particle" style="--x: 10%; --y: 20%; --duration: 15s;"></div>
+        <div class="particle" style="--x: 30%; --y: 60%; --duration: 20s;"></div>
+        <div class="particle" style="--x: 50%; --y: 40%; --duration: 18s;"></div>
+        <div class="particle" style="--x: 70%; --y: 80%; --duration: 22s;"></div>
+        <div class="particle" style="--x: 90%; --y: 30%; --duration: 17s;"></div>
+        <div class="particle" style="--x: 20%; --y: 90%; --duration: 19s;"></div>
+        <div class="particle" style="--x: 80%; --y: 10%; --duration: 21s;"></div>
+        <div class="glow-orb" style="--x: 25%; --y: 35%;"></div>
+        <div class="glow-orb" style="--x: 75%; --y: 65%;"></div>
+    </div>
 
     <!-- ===== ГЛАВНОЕ МЕНЮ ===== -->
-    <div id="main-menu">
-        <div class="logo">🃏</div>
-        <div class="title">TELEGRAM POKER</div>
-        
-        <button class="menu-btn play" onclick="startGame()">
-            🎮 Играть
-        </button>
-        
-        <button class="menu-btn rules" onclick="showRules()">
-            📜 Правила
-        </button>
-        
-        <button class="menu-btn profile" onclick="showProfile()">
-            👤 Профиль
-        </button>
-        
-        <div class="balance-display">
-            Баланс: <span id="menu-balance">1000</span> $
+    <div id="main-menu" class="screen active">
+        <div class="menu-container">
+            <!-- Логотип -->
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <span class="card-symbol">🂡</span>
+                    <span class="card-symbol card-2">🂮</span>
+                    <span class="card-symbol card-3">🃏</span>
+                </div>
+                <h1 class="game-title">
+                    <span class="title-gradient">POKER</span>
+                    <span class="title-sub">TELEGRAM</span>
+                </h1>
+                <div class="version-badge">PRO v2.0</div>
+            </div>
+
+            <!-- Статистика игрока -->
+            <div class="player-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-value" id="menu-balance">1000</div>
+                    <div class="stat-label">Баланс</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-value" id="menu-wins">0</div>
+                    <div class="stat-label">Побед</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🎮</div>
+                    <div class="stat-value" id="menu-games">0</div>
+                    <div class="stat-label">Игр</div>
+                </div>
+            </div>
+
+            <!-- Кнопки меню -->
+            <div class="menu-buttons">
+                <button class="menu-btn btn-play" onclick="startGame()">
+                    <span class="btn-icon">🎮</span>
+                    <span class="btn-text">ИГРАТЬ</span>
+                    <span class="btn-glow"></span>
+                </button>
+                
+                <button class="menu-btn btn-secondary" onclick="showSettings()">
+                    <span class="btn-icon">⚙️</span>
+                    <span class="btn-text">Настройки</span>
+                </button>
+                
+                <button class="menu-btn btn-secondary" onclick="showStats()">
+                    <span class="btn-icon">📊</span>
+                    <span class="btn-text">Статистика</span>
+                </button>
+                
+                <button class="menu-btn btn-secondary" onclick="showRules()">
+                    <span class="btn-icon">📜</span>
+                    <span class="btn-text">Правила</span>
+                </button>
+            </div>
+
+            <!-- Футер -->
+            <div class="menu-footer">
+                <div class="online-status">
+                    <span class="status-dot"></span>
+                    <span>Онлайн: <span id="online-count">1,247</span></span>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- ===== ИГРОВОЙ СТОЛ ===== -->
-    <div id="game-table">
-        <div class="game-header">
-            <button onclick="exitGame()" class="back-btn">←</button>
-            <div class="pot-display">Банк: <span class="pot-amount" id="pot">0</span> $</div>
-            <div id="stage-display">Префлоп</div>
+    <div id="game-table" class="screen">
+        <!-- Верхняя панель -->
+        <div class="game-top-bar">
+            <button class="icon-btn" onclick="exitGame()" title="Выход">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            
+            <div class="game-info">
+                <div class="stage-indicator" id="stage-display">
+                    <span class="stage-dot"></span>
+                    <span class="stage-text">Префлоп</span>
+                </div>
+            </div>
+            
+            <button class="icon-btn" onclick="toggleSound()" title="Звук" id="sound-btn">
+                <svg class="sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                </svg>
+                <svg class="sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <line x1="23" y1="9" x2="17" y2="15"/>
+                    <line x1="17" y1="9" x2="23" y2="15"/>
+                </svg>
+            </button>
         </div>
 
         <!-- Противник -->
-        <div class="opponent-area">
-            <div class="opponent-info">
-                <div class="avatar">🤖</div>
-                <div>
-                    <div>Бот</div>
-                    <div class="small-text">Баланс: <span id="bot-balance">1000</span> $</div>
+        <div class="opponent-section">
+            <div class="player-card opponent">
+                <div class="player-avatar">
+                    <div class="avatar-ring"></div>
+                    <span class="avatar-emoji">🤖</span>
+                    <div class="player-level">BOT</div>
                 </div>
-            </div>
-            <div class="opponent-cards" id="opponent-cards">
-                <div class="card back"></div>
-                <div class="card back"></div>
+                <div class="player-details">
+                    <div class="player-name">Бот</div>
+                    <div class="player-balance">$<span id="bot-balance">1000</span></div>
+                </div>
+                <div class="player-cards" id="opponent-cards">
+                    <div class="card back"></div>
+                    <div class="card back"></div>
+                </div>
+                <div class="action-bubble" id="bot-action"></div>
             </div>
         </div>
 
-        <!-- Стол -->
-        <div class="poker-table">
-            <div class="community-cards" id="community-cards"></div>
+        <!-- Игровой стол -->
+        <div class="table-section">
+            <div class="poker-table">
+                <div class="table-felt"></div>
+                <div class="table-rim"></div>
+                
+                <!-- Банк -->
+                <div class="pot-display">
+                    <div class="pot-label">БАНК</div>
+                    <div class="pot-amount" id="pot">0</div>
+                    <div class="pot-chips"></div>
+                </div>
+                
+                <!-- Общие карты -->
+                <div class="community-cards" id="community-cards"></div>
+                
+                <!-- Карты дилера -->
+                <div class="dealer-button">D</div>
+            </div>
         </div>
 
         <!-- Игрок -->
-        <div class="player-area">
-            <div class="player-cards" id="player-cards"></div>
-            
-            <div class="player-info">
-                <div class="player-avatar">👤</div>
-                <div>
-                    <div>Вы</div>
-                    <div class="small-text">Баланс: <span id="player-balance">1000</span> $</div>
+        <div class="player-section">
+            <div class="player-card current">
+                <div class="player-cards" id="player-cards"></div>
+                <div class="player-details">
+                    <div class="player-name">Вы</div>
+                    <div class="player-balance">$<span id="player-balance">1000</span></div>
                     <div class="hand-rank" id="hand-rank"></div>
                 </div>
+                <div class="player-avatar">
+                    <div class="avatar-ring"></div>
+                    <span class="avatar-emoji">👤</span>
+                </div>
+                <div class="action-bubble" id="player-action"></div>
             </div>
+        </div>
 
-            <div class="bet-controls" id="bet-controls">
-                <input type="number" class="bet-input" id="bet-amount" value="50" min="10">
-                <button class="control-btn raise" onclick="placeBet()">Поставить</button>
+        <!-- Панель управления -->
+        <div class="controls-section">
+            <div class="bet-slider-container" id="bet-slider-container" style="display:none;">
+                <label>Сумма ставки</label>
+                <input type="range" class="bet-slider" id="bet-slider" min="10" max="1000" value="50">
+                <div class="bet-value">$<span id="bet-slider-value">50</span></div>
             </div>
 
             <div class="game-controls" id="game-controls">
-                <button class="control-btn fold" onclick="playerAction('fold')">Fold</button>
-                <button class="control-btn check" onclick="playerAction('check')">Check</button>
-                <button class="control-btn call" onclick="playerAction('call')">Call</button>
-                <button class="control-btn raise" onclick="showBetControls()">Raise</button>
+                <button class="control-btn fold" onclick="playerAction('fold')">
+                    <span class="btn-label">FOLD</span>
+                    <span class="btn-sub">Сброс</span>
+                </button>
+                <button class="control-btn check" onclick="playerAction('check')">
+                    <span class="btn-label">CHECK</span>
+                    <span class="btn-sub">Чек</span>
+                </button>
+                <button class="control-btn call" onclick="playerAction('call')">
+                    <span class="btn-label">CALL</span>
+                    <span class="btn-sub">Колл</span>
+                </button>
+                <button class="control-btn raise" onclick="showBetSlider()">
+                    <span class="btn-label">RAISE</span>
+                    <span class="btn-sub">Поднять</span>
+                </button>
+            </div>
+
+            <button class="control-btn confirm" id="confirm-bet-btn" style="display:none;" onclick="placeBet()">
+                <span class="btn-label">ПОДТВЕРДИТЬ</span>
+                <span class="btn-sub">$<span id="confirm-bet-amount">50</span></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== МОДАЛЬНЫЕ ОКНА ===== -->
+    
+    <!-- Сообщение о результате -->
+    <div class="result-modal" id="result-modal">
+        <div class="result-content">
+            <div class="result-icon" id="result-icon">🏆</div>
+            <div class="result-title" id="result-title">ПОБЕДА!</div>
+            <div class="result-subtitle" id="result-subtitle">Пара Тузов</div>
+            <div class="result-amount" id="result-amount">+$200</div>
+            <button class="modal-btn" onclick="closeResult()">Продолжить</button>
+        </div>
+    </div>
+
+    <!-- Настройки -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Настройки</h2>
+                <button class="modal-close" onclick="hideSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-item">
+                    <span class="setting-label">🔊 Звуки</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="sound-toggle" checked onchange="toggleSoundSetting()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">📳 Вибрация</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="vibration-toggle" checked onchange="toggleVibrationSetting()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">🎨 Тема</span>
+                    <select class="theme-select" onchange="changeTheme(this.value)">
+                        <option value="dark">Тёмная</option>
+                        <option value="light">Светлая</option>
+                        <option value="neon">Неон</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== СООБЩЕНИЕ О РЕЗУЛЬТАТЕ ===== -->
-    <div class="game-message" id="game-message"></div>
-
-    <!-- ===== ПРАВИЛА ===== -->
-    <div id="rules-modal">
-        <div class="rules-content">
-            <h2>📜 Правила Техасского Холдема</h2>
-            <p><strong>Цель игры:</strong> Собрать лучшую комбинацию из 5 карт.</p>
-            
-            <p><strong>Комбинации (от старшей к младшей):</strong></p>
-            <ul>
-                <li>👑 Роял Флеш</li>
-                <li>🎯 Стрит Флеш</li>
-                <li>💎 Каре</li>
-                <li>🏠 Фулл Хаус</li>
-                <li>🌊 Флеш</li>
-                <li>📏 Стрит</li>
-                <li>🔺 Сет</li>
-                <li>👌 Две пары</li>
-                <li>👍 Пара</li>
-                <li>🎲 Старшая карта</li>
-            </ul>
-
-            <button class="close-btn" onclick="hideRules()">Закрыть</button>
+    <!-- Статистика -->
+    <div class="modal-overlay" id="stats-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📊 Статистика</h2>
+                <button class="modal-close" onclick="hideStats()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="stats-games">0</div>
+                        <div class="stat-label">Всего игр</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stats-wins">0</div>
+                        <div class="stat-label">Побед</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stats-losses">0</div>
+                        <div class="stat-label">Поражений</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stats-winrate">0%</div>
+                        <div class="stat-label">Винрейт</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stats-biggest-win">$0</div>
+                        <div class="stat-label">Крупный выигрыш</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stats-total-won">$0</div>
+                        <div class="stat-label">Всего выиграно</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Подключаем нашу логику -->
+    <!-- Правила -->
+    <div class="modal-overlay" id="rules-modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>📜 Правила</h2>
+                <button class="modal-close" onclick="hideRules()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="rules-content">
+                    <h3>🎯 Цель игры</h3>
+                    <p>Собрать лучшую комбинацию из 5 карт, используя 2 свои карты и 5 общих карт на столе.</p>
+                    
+                    <h3>🏆 Комбинации</h3>
+                    <div class="combinations-list">
+                        <div class="combo-item">
+                            <span class="combo-icon">👑</span>
+                            <div>
+                                <div class="combo-name">Роял Флеш</div>
+                                <div class="combo-desc">10, J, Q, K, A одной масти</div>
+                            </div>
+                        </div>
+                        <div class="combo-item">
+                            <span class="combo-icon">🎯</span>
+                            <div>
+                                <div class="combo-name">Стрит Флеш</div>
+                                <div class="combo-desc">5 последовательных карт одной масти</div>
+                            </div>
+                        </div>
+                        <div class="combo-item">
+                            <span class="combo-icon">💎</span>
+                            <div>
+                                <div class="combo-name">Каре</div>
+                                <div class="combo-desc">4 карты одного достоинства</div>
+                            </div>
+                        </div>
+                        <div class="combo-item">
+                            <span class="combo-icon">🏠</span>
+                            <div>
+                                <div class="combo-name">Фулл Хаус</div>
+                                <div class="combo-desc">3 + 2 карты одного достоинства</div>
+                            </div>
+                        </div>
+                        <div class="combo-item">
+                            <span class="combo-icon">🌊</span>
+                            <div>
+                                <div class="combo-name">Флеш</div>
+                                <div class="combo-desc">5 карт одной масти</div>
+                            </div>
+                        </div>
+                        <div class="combo-item">
+                            <span class="combo-icon">📏</span>
+                            <div>
+                                <div class="combo-name">Стрит</div>
+                                <div class="combo-desc">5 последовательных карт</div>
+                            </div>
+                        </div>
+                        <div class="combo-item">
+                            <span class="combo-icon">🔺</span>
+                            <div>
+                                <div class="combo-name">Сет</div>
+                                <div class="combo-desc">3 карты одного достоинства</div>
+                            </div>
+                        </div>
+                        <div class="combo-item">
+                            <span class="combo-icon">👌</span>
+                            <div>
+                                <div class="combo-name">Две пары</div>
+                                <div class="combo-desc">2 + 2 карты одного достоинства</div>
+                            </div>
+                        </div>
+                        <div class="combo-item">
+                            <span class="combo-icon">👍</span>
+                            <div>
+                                <div class="combo-name">Пара</div>
+                                <div class="combo-desc">2 карты одного достоинства</div>
+                            </div>
+                        </div>
+                        <div class="combo-item">
+                            <span class="combo-icon">🎲</span>
+                            <div>
+                                <div class="combo-name">Старшая карта</div>
+                                <div class="combo-desc">Наивысшая карта</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Тост уведомления -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Экран загрузки -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
+    </div>
+
+    <!-- Логика игры -->
     <script src="game.js"></script>
 </body>
 </html>
