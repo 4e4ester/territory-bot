@@ -351,3 +351,18 @@ input[type="range"]::-webkit-slider-thumb {
 .animate-pulse {
   animation: pulse 2s infinite;
 }
+
+/* ... остальной CSS ... */
+
+.error-text {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 10px;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.error-text.hidden {
+  display: none;
+}
