@@ -8,42 +8,84 @@ const Game = {
   cameraTarget: new THREE.Vector3(0, 0, 0),
   isDragging: false,
   previousMousePosition: { x: 0, y: 0 },
+  loadingTimeout: null,
 
   init() {
-    // Показываем экран загрузки
+    console.log('🎮 Game initializing...');
+    
+    // ТАЙМЕР БЕЗОПАСНОСТИ: Скрыть загрузку через 3 секунды в любом случае
+    this.loadingTimeout = setTimeout(() => {
+      this.hideLoadingScreen();
+    }, 3000);
+    
     this.updateLoadingText('Инициализация...');
     
-    // Инициализация звуков
-    SoundSystem.init();
-    this.updateLoadingText('Загрузка звуков...');
-
-    // Telegram WebApp
-    if (window.Telegram && window.Telegram.WebApp) {
-      window.Telegram.WebApp.ready();
-      window.Telegram.WebApp.expand();
-    }
-
-    this.updateLoadingText('Создание 3D сцены...');
-    setTimeout(() => {
-      this.init3D();
-      this.initUI();
-      GameStore.subscribe(state => this.onStateChange(state));
+    try {
+      // Проверка Three.js
+      if (typeof THREE === 'undefined') {
+        throw new Error('Three.js не загрузился!');
+      }
+      console.log('✅ Three.js loaded');
       
-      // Скрываем экран загрузки
+      // Звуки
+      this.updateLoadingText('Загрузка звуков...');
+      SoundSystem.init();
+      
+      // Telegram
+      if (window.Telegram && window.Telegram.WebApp) {
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
+        console.log('✅ Telegram WebApp ready');
+      }
+      
+      // 3D сцена
+      this.updateLoadingText('Создание сцены...');
       setTimeout(() => {
-        document.getElementById('loading-screen').classList.add('hidden');
-        this.isInitialized = true;
+        this.init3D();
+        this.initUI();
+        GameStore.subscribe(state => this.onStateChange(state));
+        
+        console.log('✅ Game initialized successfully');
+        this.hideLoadingScreen();
       }, 500);
-    }, 300);
+      
+    } catch (error) {
+      console.error('❌ Initialization error:', error);
+      this.showLoadingError(error.message);
+      this.hideLoadingScreen();
+    }
+  },
+
+  hideLoadingScreen() {
+    const screen = document.getElementById('loading-screen');
+    if (screen) {
+      screen.classList.add('hidden');
+      screen.style.display = 'none';
+    }
+    if (this.loadingTimeout) {
+      clearTimeout(this.loadingTimeout);
+    }
+  },
+
+  showLoadingError(message) {
+    const errorEl = document.getElementById('loading-error');
+    if (errorEl) {
+      errorEl.textContent = 'Ошибка: ' + message;
+      errorEl.classList.remove('hidden');
+    }
   },
 
   updateLoadingText(text) {
     const el = document.getElementById('loading-text');
     if (el) el.textContent = text;
+    console.log('📝 Loading:', text);
   },
 
   init3D() {
     const canvas = document.getElementById('game-canvas');
+    if (!canvas) {
+      throw new Error('Canvas not found');
+    }
     
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0f0f1a);
@@ -57,30 +99,15 @@ const Game = {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.outputEncoding = THREE.sRGBEncoding;
 
-    // Улучшенное освещение
+    // Свет
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     this.scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(10, 20, 10);
     directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    directionalLight.shadow.camera.near = 0.5;
-    directionalLight.shadow.camera.far = 50;
-    directionalLight.shadow.camera.left = -20;
-    directionalLight.shadow.camera.right = 20;
-    directionalLight.shadow.camera.top = 20;
-    directionalLight.shadow.camera.bottom = -20;
     this.scene.add(directionalLight);
-
-    // Дополнительный свет
-    const pointLight = new THREE.PointLight(0x3b82f6, 0.5, 50);
-    pointLight.position.set(0, 10, 0);
-    this.scene.add(pointLight);
 
     // Сетка
     const gridHelper = new THREE.GridHelper(20, 20, 0x3b82f6, 0x1e293b);
@@ -90,6 +117,7 @@ const Game = {
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
 
+    // События
     canvas.addEventListener('click', (e) => this.onCanvasClick(e));
     canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
     canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
@@ -102,9 +130,12 @@ const Game = {
 
     TileRenderer.init(this.scene);
     this.animate();
+    
+    console.log('✅ 3D Scene initialized');
   },
 
   initUI() {
+    // Кнопки меню
     document.querySelectorAll('.size-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         SoundSystem.play('click');
@@ -173,36 +204,46 @@ const Game = {
         window.Telegram.WebApp.HapticFeedback[`${type}Occurred`]();
       }
     };
+    
+    console.log('✅ UI initialized');
   },
 
   startGame() {
-    const settings = GameStore.getState().settings;
-    const size = MapGenerator.getSizeByName(settings.mapSize);
-    
-    GameStore.reset();
-    GameStore.setState({
-      map: MapGenerator.generate(size.width, size.height),
-      mapSize: size,
-      phase: 'action',
-      bots: this.createBots(settings.botCount, settings.difficulty)
-    });
+    try {
+      const settings = GameStore.getState().settings;
+      const size = MapGenerator.getSizeByName(settings.mapSize);
+      
+      GameStore.reset();
+      GameStore.setState({
+        map: MapGenerator.generate(size.width, size.height),
+        mapSize: size,
+        phase: 'action',
+        bots: this.createBots(settings.botCount, settings.difficulty)
+      });
 
-    TileRenderer.clear();
-    GameStore.getState().map.forEach(tile => {
-      TileRenderer.createTile(tile, (t) => this.onTileSelect(t));
-    });
+      TileRenderer.clear();
+      GameStore.getState().map.forEach(tile => {
+        TileRenderer.createTile(tile, (t) => this.onTileSelect(t));
+      });
 
-    // Центрируем камеру
-    const centerX = (size.width - 1) * 1.1 / 2;
-    const centerZ = (size.height - 1) * 1.1 / 2;
-    this.cameraTarget.set(centerX, 10, centerZ);
-    this.camera.position.set(centerX + 5, 12, centerZ + 8);
-    this.camera.lookAt(centerX, 0, centerZ);
+      // Центрируем камеру
+      const centerX = (size.width - 1) * 1.1 / 2;
+      const centerZ = (size.height - 1) * 1.1 / 2;
+      this.cameraTarget.set(centerX, 10, centerZ);
+      this.camera.position.set(centerX + 5, 12, centerZ + 8);
+      this.camera.lookAt(centerX, 0, centerZ);
 
-    document.getElementById('main-menu').classList.add('hidden');
-    this.updateUI();
-    window.triggerHaptic('success');
-    SoundSystem.play('turn');
+      document.getElementById('main-menu').classList.add('hidden');
+      document.getElementById('top-bar').classList.remove('hidden');
+      this.updateUI();
+      window.triggerHaptic('success');
+      SoundSystem.play('turn');
+      
+      console.log('✅ Game started');
+    } catch (error) {
+      console.error('Start game error:', error);
+      alert('Ошибка запуска игры: ' + error.message);
+    }
   },
 
   createBots(count, difficulty) {
@@ -303,7 +344,7 @@ const Game = {
       this.showMessage(result.message);
       this.checkWinCondition();
     } else {
-      SoundSystem.play('error');
+      SoundSystem.play('lose');
       this.showMessage(result.message);
     }
 
@@ -353,7 +394,6 @@ const Game = {
     const state = GameStore.getState();
     const totalTiles = Array.from(state.map.values()).filter(t => t.type !== 'water').length;
     const playerTiles = GameStore.countTerritories('player');
-    const botTiles = totalTiles - playerTiles;
 
     if (playerTiles === totalTiles) {
       this.endGame(true);
@@ -494,7 +534,6 @@ const Game = {
   animate() {
     requestAnimationFrame(() => this.animate());
     
-    // Плавное движение камеры
     if (this.camera) {
       this.camera.position.lerp(this.cameraTarget.clone().add(new THREE.Vector3(5, 12, 8)), 0.05);
       this.camera.lookAt(this.cameraTarget);
@@ -506,12 +545,15 @@ const Game = {
   showMenu() {
     document.getElementById('main-menu').classList.remove('hidden');
     document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('top-bar').classList.add('hidden');
     GameStore.reset();
     GameStore.setState({ phase: 'menu' });
     TileRenderer.clear();
   }
 };
 
+// Запуск
 window.addEventListener('DOMContentLoaded', () => {
+  console.log('🚀 DOM Ready, starting game...');
   Game.init();
 });
