@@ -1,7 +1,4 @@
-// Боевая система
-
 const Combat = {
-  // Бонусы местности
   terrainBonus: {
     mountain: 1.5,
     city: 1.3,
@@ -10,10 +7,8 @@ const Combat = {
     water: 0
   },
 
-  // Расчёт боя
   calculateBattle(attackerTile, defenderTile, attackTroops) {
     const defenseBonus = this.terrainBonus[defenderTile.type] || 1.0;
-    
     const attackPower = attackTroops;
     const defensePower = defenderTile.troops * defenseBonus;
 
@@ -33,7 +28,6 @@ const Combat = {
     };
   },
 
-  // Выполнить атаку
   performAttack(fromTileId, toTileId, troops) {
     const fromTile = GameStore.getTile(fromTileId);
     const toTile = GameStore.getTile(toTileId);
@@ -54,10 +48,8 @@ const Combat = {
       return { success: false, message: 'Недостаточно войск!' };
     }
 
-    // Расчёт боя
     const result = this.calculateBattle(fromTile, toTile, troops);
 
-    // Обновляем войска
     GameStore.updateTile(fromTileId, {
       troops: fromTile.troops - result.attackerLoss
     });
@@ -66,14 +58,12 @@ const Combat = {
       troops: Math.max(0, toTile.troops - result.defenderLoss)
     });
 
-    // Захват
     if (result.captured) {
       GameStore.updateTile(toTileId, {
         ownerId: fromTile.ownerId,
         troops: result.remainingAttackers
       });
 
-      // Проверяем аннексию
       const annexed = this.checkAnnexation(toTile, fromTile.ownerId);
       
       return {
@@ -92,7 +82,6 @@ const Combat = {
     };
   },
 
-  // Проверка аннексии (окружения)
   checkAnnexation(capturedTile, ownerId) {
     const annexed = [];
 
@@ -112,7 +101,6 @@ const Combat = {
     return annexed;
   },
 
-  // Проверка окружения
   isEncircled(tile, ownerId) {
     if (tile.ownerId === ownerId || !tile.ownerId) return false;
 
