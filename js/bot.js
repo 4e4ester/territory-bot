@@ -1,7 +1,4 @@
-// ИИ ботов
-
 const BotAI = {
-  // Сделать ход бота
   makeTurn(botId) {
     const botTiles = GameStore.getPlayerTiles(botId);
     if (botTiles.length === 0) return;
@@ -14,15 +11,12 @@ const BotAI = {
     }
   },
 
-  // Получить сложность бота
   getBotDifficulty(botId) {
     const bot = GameStore.getState().bots.find(b => b.id === botId);
     return bot ? bot.difficulty : 'easy';
   },
 
-  // Принять решение
   makeDecision(botId, botTiles, difficulty) {
-    // Найти слабую соседнюю клетку врага
     for (const tile of botTiles) {
       if (tile.troops < 20) continue;
 
@@ -42,7 +36,6 @@ const BotAI = {
       }
     }
 
-    // Атаковать нейтральную территорию
     for (const tile of botTiles) {
       if (tile.troops < 30) continue;
 
@@ -62,7 +55,6 @@ const BotAI = {
     return { action: 'wait' };
   },
 
-  // Коэффициент атаки по сложности
   getAttackRatio(difficulty) {
     const ratios = {
       easy: 0.5,
@@ -72,7 +64,6 @@ const BotAI = {
     return ratios[difficulty] || 0.5;
   },
 
-  // Выполнить атаку
   executeAttack(fromTileId, toTileId, troops, botId) {
     const fromTile = GameStore.getTile(fromTileId);
     const toTile = GameStore.getTile(toTileId);
@@ -97,7 +88,6 @@ const BotAI = {
     }
   },
 
-  // Регенерация войск
   regenerateTroops(botId) {
     const botTiles = GameStore.getPlayerTiles(botId);
     const difficulty = this.getBotDifficulty(botId);
