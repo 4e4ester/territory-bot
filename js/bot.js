@@ -1,87 +1,59 @@
 const BotAI = {
   makeTurn(botId) {
-    const botTiles = GameStore.getPlayerTiles(botId);
-    if (botTiles.length === 0) return;
-
-    const difficulty = this.getBotDifficulty(botId);
-    const decision = this.makeDecision(botId, botTiles, difficulty);
-
-    if (decision.action === 'attack') {
-      this.executeAttack(decision.fromTile, decision.toTile, decision.troops, botId);
-    }
-  },
-
-  getBotDifficulty(botId) {
+    const tiles = GameStore.getPlayerTiles(botId);
+    if (tiles.length === 0) return;
+    
     const bot = GameStore.getState().bots.find(b => b.id === botId);
-    return bot ? bot.difficulty : 'easy';
-  },
-
-  makeDecision(botId, botTiles, difficulty) {
-    for (const tile of botTiles) {
+    const difficulty = bot ? bot.difficulty : 'easy';
+    
+    // Атака слабых соседей
+    for (const tile of tiles) {
       if (tile.troops < 20) continue;
-
-      for (const neighborId of tile.neighbors) {
-        const neighbor = GameStore.getTile(neighborId);
-        if (neighbor && neighbor.ownerId !== botId && neighbor.type !== 'water') {
-          const attackRatio = this.getAttackRatio(difficulty);
-          if (neighbor.troops < tile.troops * attackRatio) {
-            return {
-              action: 'attack',
-              fromTile: tile.id,
-              toTile: neighbor.id,
-              troops: Math.floor(tile.troops * 0.7)
-            };
+      
+      for (const nid of tile.neighbors) {
+        const n = GameStore.getTile(nid);
+        if (n && n.ownerId !== botId && n.type !== 'water') {
+          const ratio = { easy: 0.5, medium: 0.7, hard: 0.9 }[difficulty] || 0.5;
+          if (n.troops < tile.troops * ratio) {
+            this.attack(tile.id, nid, Math.floor(tile.troops * 0.7), botId);
+            return;
           }
         }
       }
     }
-
-    for (const tile of botTiles) {
+    
+    // Захват нейтральных
+    for (const tile of tiles) {
       if (tile.troops < 30) continue;
-
-      for (const neighborId of tile.neighbors) {
-        const neighbor = GameStore.getTile(neighborId);
-        if (neighbor && !neighbor.ownerId && neighbor.type !== 'water') {
-          return {
-            action: 'attack',
-            fromTile: tile.id,
-            toTile: neighbor.id,
-            troops: Math.floor(tile.troops * 0.5)
-          };
+      
+      for (const nid of tile.neighbors) {
+        const n = GameStore.getTile(nid);
+        if (n && !n.ownerId && n.type !== 'water') {
+          this.attack(tile.id, nid, Math.floor(tile.troops * 0.5), botId);
+          return;
         }
       }
     }
-
-    return { action: 'wait' };
   },
 
-  getAttackRatio(difficulty) {
-    const ratios = {
-      easy: 0.5,
-      medium: 0.7,
-      hard: 0.9
-    };
-    return ratios[difficulty] || 0.5;
-  },
-
-  executeAttack(fromTileId, toTileId, troops, botId) {
-    const fromTile = GameStore.getTile(fromTileId);
-    const toTile = GameStore.getTile(toTileId);
-
-    if (!fromTile || !toTile) return;
-
-    const result = Combat.calculateBattle(fromTile, toTile, troops);
-
-    GameStore.updateTile(fromTileId, {
-      troops: fromTile.troops - result.attackerLoss
+  attack(fromId, toId, troops, botId) {
+    const from = GameStore.getTile(fromId);
+    const to = GameStore.getTile(toId);
+    
+    if (!from || !to) return;
+    
+    const result = Combat.calculateBattle(from, to, troops);
+    
+    GameStore.updateTile(fromId, {
+      troops: from.troops - result.attackerLoss
     });
-
-    GameStore.updateTile(toTileId, {
-      troops: Math.max(0, toTile.troops - result.defenderLoss)
+    
+    GameStore.updateTile(toId, {
+      troops: Math.max(0, to.troops - result.defenderLoss)
     });
-
+    
     if (result.captured) {
-      GameStore.updateTile(toTileId, {
+      GameStore.updateTile(toId, {
         ownerId: botId,
         troops: result.remainingAttackers
       });
@@ -89,14 +61,14 @@ const BotAI = {
   },
 
   regenerateTroops(botId) {
-    const botTiles = GameStore.getPlayerTiles(botId);
-    const difficulty = this.getBotDifficulty(botId);
-    const regenRate = { easy: 2, medium: 4, hard: 6 }[difficulty] || 2;
-
-    botTiles.forEach(tile => {
-      if (tile.troops < tile.maxTroops * 0.5) {
-        GameStore.updateTile(tile.id, {
-          troops: Math.min(tile.maxTroops, tile.troops + regenRate)
+    const tiles = GameStore.getPlayerTiles(botId);
+    const bot = GameStore.getState().bots.find(b => b.id === botId);
+    const rate = { easy: 2, medium: 4, hard: 6 }[bot?.difficulty] || 2;
+    
+    tiles.forEach(t => {
+      if (t.troops < t.maxTroops * 0.5) {
+        GameStore.updateTile(t.id, {
+          troops: Math.min(t.maxTroops, t.troops + rate)
         });
       }
     });
