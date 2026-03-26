@@ -2,7 +2,6 @@ const GameStore = {
   state: {
     map: new Map(),
     mapSize: { width: 8, height: 8 },
-    players: [],
     bots: [],
     currentPlayer: 'player',
     turn: 1,
@@ -10,36 +9,34 @@ const GameStore = {
     selectedTile: null,
     attackTarget: null,
     attackAmount: 10,
-    message: null,
     gameOver: false,
     winner: null,
     settings: {
       mapSize: 'small',
       botCount: 2,
       difficulty: 'easy'
-    },
-    loaded: false
+    }
   },
 
   getState() {
     return this.state;
   },
 
-  setState(newState) {
-    this.state = { ...this.state, ...newState };
-    this.notifyListeners();
+  setState(newData) {
+    this.state = { ...this.state, ...newData };
+    this.listeners.forEach(fn => fn(this.state));
   },
 
-  getTile(tileId) {
-    return this.state.map.get(tileId);
+  getTile(id) {
+    return this.state.map.get(id);
   },
 
-  updateTile(tileId, updates) {
-    const tile = this.state.map.get(tileId);
+  updateTile(id, updates) {
+    const tile = this.state.map.get(id);
     if (tile) {
       Object.assign(tile, updates);
-      this.state.map.set(tileId, tile);
-      this.notifyListeners();
+      this.state.map.set(id, tile);
+      this.listeners.forEach(fn => fn(this.state));
     }
   },
 
@@ -56,18 +53,15 @@ const GameStore = {
   },
 
   listeners: [],
-  subscribe(listener) {
-    this.listeners.push(listener);
-  },
-  notifyListeners() {
-    this.listeners.forEach(fn => fn(this.state));
+  
+  subscribe(fn) {
+    this.listeners.push(fn);
   },
 
   reset() {
     this.state = {
       map: new Map(),
       mapSize: { width: 8, height: 8 },
-      players: [],
       bots: [],
       currentPlayer: 'player',
       turn: 1,
@@ -75,18 +69,11 @@ const GameStore = {
       selectedTile: null,
       attackTarget: null,
       attackAmount: 10,
-      message: '🎮 Ваш ход!',
       gameOver: false,
       winner: null,
-      settings: this.state.settings,
-      loaded: true
+      settings: this.state.settings
     };
-    this.notifyListeners();
-  },
-
-  setLoading(loaded) {
-    this.state.loaded = loaded;
-    this.notifyListeners();
+    this.listeners.forEach(fn => fn(this.state));
   }
 };
 
