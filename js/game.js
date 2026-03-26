@@ -5,40 +5,47 @@ const Game = {
   raycaster: null,
   mouse: null,
   isInitialized: false,
+  
+  // Управление камерой
+  cameraAngle: 0,
+  cameraDistance: 15,
+  cameraHeight: 12,
   cameraTarget: new THREE.Vector3(0, 0, 0),
   isDragging: false,
+  isPinching: false,
   previousMousePosition: { x: 0, y: 0 },
-  loadingTimeout: null,
+  previousPinchDistance: 0,
+  clickStartTime: 0,
+  
+  // Для кликов
+  tilesGroup: null,
+  selectedMesh: null,
 
   init() {
     console.log('🎮 Game initializing...');
     
-    // ТАЙМЕР БЕЗОПАСНОСТИ: Скрыть загрузку через 3 секунды в любом случае
-    this.loadingTimeout = setTimeout(() => {
+    // Таймер безопасности
+    setTimeout(() => {
       this.hideLoadingScreen();
     }, 3000);
     
     this.updateLoadingText('Инициализация...');
     
     try {
-      // Проверка Three.js
       if (typeof THREE === 'undefined') {
         throw new Error('Three.js не загрузился!');
       }
       console.log('✅ Three.js loaded');
       
-      // Звуки
       this.updateLoadingText('Загрузка звуков...');
       SoundSystem.init();
       
-      // Telegram
       if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
         console.log('✅ Telegram WebApp ready');
       }
       
-      // 3D сцена
       this.updateLoadingText('Создание сцены...');
       setTimeout(() => {
         this.init3D();
@@ -60,10 +67,7 @@ const Game = {
     const screen = document.getElementById('loading-screen');
     if (screen) {
       screen.classList.add('hidden');
-      screen.style.display = 'none';
-    }
-    if (this.loadingTimeout) {
-      clearTimeout(this.loadingTimeout);
+      setTimeout(() => { screen.style.display = 'none'; }, 500);
     }
   },
 
@@ -89,49 +93,69 @@ const Game = {
     
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0f0f1a);
-    this.scene.fog = new THREE.Fog(0x0f0f1a, 10, 50);
+    this.scene.fog = new THREE.Fog(0x0f0f1a, 20, 60);
 
-    this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-    this.camera.position.set(5, 10, 8);
-    this.camera.lookAt(0, 0, 0);
+    // Камера
+    this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    this.updateCameraPosition();
 
+    // Рендерер
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     // Свет
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     this.scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
     directionalLight.position.set(10, 20, 10);
     directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
     this.scene.add(directionalLight);
 
+    // Группа для клеток
+    this.tilesGroup = new THREE.Group();
+    this.scene.add(this.tilesGroup);
+
     // Сетка
-    const gridHelper = new THREE.GridHelper(20, 20, 0x3b82f6, 0x1e293b);
-    gridHelper.position.y = -0.1;
+    const gridHelper = new THREE.GridHelper(30, 30, 0x3b82f6, 0x1e293b);
+    gridHelper.position.y = -0.2;
     this.scene.add(gridHelper);
 
+    // Raycaster
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
 
-    // События
-    canvas.addEventListener('click', (e) => this.onCanvasClick(e));
-    canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
-    canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
-    canvas.addEventListener('mouseup', () => this.onMouseUp());
-    canvas.addEventListener('touchstart', (e) => this.onTouchStart(e), {passive: false});
-    canvas.addEventListener('touchmove', (e) => this.onTouchMove(e), {passive: false});
-    canvas.addEventListener('touchend', () => this.onMouseUp());
-    
-    window.addEventListener('resize', () => this.onResize());
+    // События - мышь
+    canvas.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
+    canvas.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
+    canvas.addEventListener('mouseup', (e) => this.onMouseUp(e), false);
+    canvas.addEventListener('click', (e) => this.onClick(e), false);
+    canvas.addEventListener('wheel', (e) => this.onWheel(e), false);
+
+    // События - тач
+    canvas.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
+    canvas.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
+    canvas.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
+
+    window.addEventListener('resize', () => this.onResize(), false);
 
     TileRenderer.init(this.scene);
-    this.animate();
     
     console.log('✅ 3D Scene initialized');
+    
+    this.animate();
+  },
+
+  updateCameraPosition() {
+    const x = this.cameraTarget.x + Math.cos(this.cameraAngle) * this.cameraDistance;
+    const z = this.cameraTarget.z + Math.sin(this.cameraAngle) * this.cameraDistance;
+    this.camera.position.set(x, this.cameraHeight, z);
+    this.camera.lookAt(this.cameraTarget.x, 0, this.cameraTarget.z);
   },
 
   initUI() {
@@ -221,20 +245,29 @@ const Game = {
         bots: this.createBots(settings.botCount, settings.difficulty)
       });
 
+      // Очистка и создание клеток
       TileRenderer.clear();
+      this.tilesGroup.clear();
+      
       GameStore.getState().map.forEach(tile => {
-        TileRenderer.createTile(tile, (t) => this.onTileSelect(t));
+        const mesh = TileRenderer.createTile(tile, null);
+        if (mesh) {
+          mesh.name = tile.id;
+          mesh.userData.tileId = tile.id;
+          this.tilesGroup.add(mesh);
+        }
       });
 
       // Центрируем камеру
       const centerX = (size.width - 1) * 1.1 / 2;
       const centerZ = (size.height - 1) * 1.1 / 2;
-      this.cameraTarget.set(centerX, 10, centerZ);
-      this.camera.position.set(centerX + 5, 12, centerZ + 8);
-      this.camera.lookAt(centerX, 0, centerZ);
+      this.cameraTarget.set(centerX, 0, centerZ);
+      this.updateCameraPosition();
 
       document.getElementById('main-menu').classList.add('hidden');
       document.getElementById('top-bar').classList.remove('hidden');
+      document.getElementById('controls-hint').classList.remove('hidden');
+      
       this.updateUI();
       window.triggerHaptic('success');
       SoundSystem.play('turn');
@@ -266,26 +299,182 @@ const Game = {
     return bots;
   },
 
+  // ===== УПРАВЛЕНИЕ КАМЕРОЙ =====
+
+  onMouseDown(event) {
+    if (event.button === 0) { // Левая кнопка
+      this.isDragging = true;
+      this.clickStartTime = Date.now();
+      this.previousMousePosition = {
+        x: event.clientX,
+        y: event.clientY
+      };
+    }
+  },
+
+  onMouseMove(event) {
+    if (!this.isDragging) return;
+
+    const deltaX = event.clientX - this.previousMousePosition.x;
+    const deltaY = event.clientY - this.previousMousePosition.y;
+
+    // Вращение камеры
+    this.cameraAngle -= deltaX * 0.005;
+    
+    // Наклон камеры
+    this.cameraHeight = Math.max(5, Math.min(25, this.cameraHeight - deltaY * 0.1));
+
+    this.updateCameraPosition();
+
+    this.previousMousePosition = {
+      x: event.clientX,
+      y: event.clientY
+    };
+  },
+
+  onMouseUp(event) {
+    this.isDragging = false;
+  },
+
+  onClick(event) {
+    // Если было перетаскивание - не обрабатываем клик
+    const clickDuration = Date.now() - this.clickStartTime;
+    if (clickDuration > 200) return;
+
+    this.handleTileClick(event);
+  },
+
+  onWheel(event) {
+    event.preventDefault();
+    
+    // Зум колёсиком
+    this.cameraDistance += event.deltaY * 0.01;
+    this.cameraDistance = Math.max(8, Math.min(30, this.cameraDistance));
+    
+    this.updateCameraPosition();
+  },
+
+  // ===== ТАЧ УПРАВЛЕНИЕ =====
+
+  onTouchStart(event) {
+    event.preventDefault();
+    
+    if (event.touches.length === 1) {
+      this.isDragging = true;
+      this.clickStartTime = Date.now();
+      this.previousMousePosition = {
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY
+      };
+    } else if (event.touches.length === 2) {
+      this.isPinching = true;
+      this.previousPinchDistance = this.getPinchDistance(event.touches);
+    }
+  },
+
+  onTouchMove(event) {
+    event.preventDefault();
+    
+    if (this.isPinching && event.touches.length === 2) {
+      // Зум щипком
+      const distance = this.getPinchDistance(event.touches);
+      const delta = this.previousPinchDistance - distance;
+      
+      this.cameraDistance += delta * 0.05;
+      this.cameraDistance = Math.max(8, Math.min(30, this.cameraDistance));
+      
+      this.previousPinchDistance = distance;
+      this.updateCameraPosition();
+    } else if (this.isDragging && event.touches.length === 1) {
+      // Вращение камеры
+      const deltaX = event.touches[0].clientX - this.previousMousePosition.x;
+      const deltaY = event.touches[0].clientY - this.previousMousePosition.y;
+
+      this.cameraAngle -= deltaX * 0.005;
+      this.cameraHeight = Math.max(5, Math.min(25, this.cameraHeight - deltaY * 0.1));
+
+      this.updateCameraPosition();
+
+      this.previousMousePosition = {
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY
+      };
+    }
+  },
+
+  onTouchEnd(event) {
+    if (event.touches.length === 0) {
+      this.isDragging = false;
+      this.isPinching = false;
+      
+      // Если это был короткий тап - обрабатываем клик
+      const clickDuration = Date.now() - this.clickStartTime;
+      if (clickDuration < 200 && !this.isPinching) {
+        this.handleTileClick(event.changedTouches[0]);
+      }
+    }
+  },
+
+  getPinchDistance(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  },
+
+  // ===== КЛИКИ ПО КЛЕТКАМ =====
+
+  handleTileClick(event) {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    
+    const clientX = event.clientX || event.pageX;
+    const clientY = event.clientY || event.pageY;
+    
+    this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    
+    // Ищем пересечения с клетками
+    const intersects = this.raycaster.intersectObjects(this.tilesGroup.children);
+
+    if (intersects.length > 0) {
+      const mesh = intersects[0].object;
+      const tileId = mesh.userData.tileId;
+      
+      if (tileId) {
+        const tile = GameStore.getTile(tileId);
+        if (tile) {
+          console.log('🎯 Clicked tile:', tileId, tile);
+          this.onTileSelect(tile);
+        }
+      }
+    }
+  },
+
   onTileSelect(tile) {
     if (GameStore.getState().gameOver) return;
     if (GameStore.getState().currentPlayer !== 'player') return;
 
     const state = GameStore.getState();
 
+    // Снять выделение с предыдущей
     if (state.selectedTile) {
       TileRenderer.unhighlight(state.selectedTile);
     }
 
+    // Если кликнули на ту же - снять выделение
     if (state.selectedTile === tile.id) {
       GameStore.setState({ selectedTile: null, attackTarget: null });
       this.hideAttackPanel();
       return;
     }
 
+    // Выделить новую
     GameStore.setState({ selectedTile: tile.id });
     TileRenderer.highlight(tile.id, '#44ff44');
     SoundSystem.play('select');
 
+    // Если вражеская и соседняя - показать панель атаки
     if (tile.ownerId && tile.ownerId !== 'player') {
       const selectedTile = GameStore.getTile(state.selectedTile);
       if (selectedTile && selectedTile.neighbors.includes(tile.id)) {
@@ -446,85 +635,6 @@ const Game = {
     this.updateUI();
   },
 
-  onCanvasClick(event) {
-    if (this.isDragging) return;
-
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(this.scene.children);
-
-    if (intersects.length > 0) {
-      const mesh = intersects[0].object;
-      if (mesh.userData && mesh.userData.tileId) {
-        const tile = GameStore.getTile(mesh.userData.tileId);
-        if (tile) this.onTileSelect(tile);
-      }
-    }
-  },
-
-  onMouseDown(event) {
-    this.isDragging = false;
-    this.previousMousePosition = {
-      x: event.clientX,
-      y: event.clientY
-    };
-  },
-
-  onMouseMove(event) {
-    if (!this.previousMousePosition) return;
-
-    const deltaMove = {
-      x: event.clientX - this.previousMousePosition.x,
-      y: event.clientY - this.previousMousePosition.y
-    };
-
-    if (Math.abs(deltaMove.x) > 5 || Math.abs(deltaMove.y) > 5) {
-      this.isDragging = true;
-    }
-
-    this.previousMousePosition = {
-      x: event.clientX,
-      y: event.clientY
-    };
-  },
-
-  onMouseUp() {
-    this.isDragging = false;
-    this.previousMousePosition = null;
-  },
-
-  onTouchStart(event) {
-    if (event.touches.length === 1) {
-      this.isDragging = false;
-      this.previousMousePosition = {
-        x: event.touches[0].clientX,
-        y: event.touches[0].clientY
-      };
-    }
-  },
-
-  onTouchMove(event) {
-    event.preventDefault();
-    if (!this.previousMousePosition || event.touches.length !== 1) return;
-
-    const deltaMove = {
-      x: event.touches[0].clientX - this.previousMousePosition.x,
-      y: event.touches[0].clientY - this.previousMousePosition.y
-    };
-
-    if (Math.abs(deltaMove.x) > 5 || Math.abs(deltaMove.y) > 5) {
-      this.isDragging = true;
-    }
-
-    this.previousMousePosition = {
-      x: event.touches[0].clientX,
-      y: event.touches[0].clientY
-    };
-  },
-
   onResize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
@@ -533,27 +643,9 @@ const Game = {
 
   animate() {
     requestAnimationFrame(() => this.animate());
-    
-    if (this.camera) {
-      this.camera.position.lerp(this.cameraTarget.clone().add(new THREE.Vector3(5, 12, 8)), 0.05);
-      this.camera.lookAt(this.cameraTarget);
-    }
-    
     this.renderer.render(this.scene, this.camera);
   },
 
   showMenu() {
     document.getElementById('main-menu').classList.remove('hidden');
-    document.getElementById('game-over-screen').classList.add('hidden');
-    document.getElementById('top-bar').classList.add('hidden');
-    GameStore.reset();
-    GameStore.setState({ phase: 'menu' });
-    TileRenderer.clear();
-  }
-};
-
-// Запуск
-window.addEventListener('DOMContentLoaded', () => {
-  console.log('🚀 DOM Ready, starting game...');
-  Game.init();
-});
+    document.getElementById
