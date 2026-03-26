@@ -7,22 +7,24 @@
   <meta name="theme-color" content="#0f0f1a">
   <title>Territory War</title>
   
-  <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
-  <!-- Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   
-  <!-- Стили -->
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- Игровой контейнер -->
+  <!-- Экран загрузки -->
+  <div id="loading-screen">
+    <div class="loader">
+      <div class="loader-spinner"></div>
+      <h2>Загрузка...</h2>
+      <p id="loading-text">Инициализация</p>
+    </div>
+  </div>
+
   <div id="game-container">
-    <!-- 3D Canvas -->
     <canvas id="game-canvas"></canvas>
     
-    <!-- UI Слой -->
     <div id="ui-layer">
       <!-- Верхняя панель -->
       <div id="top-bar" class="ui-panel">
@@ -36,7 +38,7 @@
             <span id="troops-count">0</span>
           </div>
           <div class="stat-item">
-            <span class="stat-icon">📍</span>
+            <span class="stat-icon"></span>
             <span id="turn-count">1</span>
           </div>
         </div>
@@ -75,7 +77,7 @@
     </div>
     
     <!-- Главное меню -->
-    <div id="main-menu" class="menu-screen">
+    <div id="main-menu" class="menu-screen hidden">
       <div class="menu-content">
         <h1>🌍 Territory War</h1>
         <p class="subtitle">Захвати все территории!</p>
@@ -114,7 +116,7 @@
     </div>
   </div>
   
-  <!-- Скрипты -->
+  <script src="js/sound.js"></script>
   <script src="js/store.js"></script>
   <script src="js/map.js"></script>
   <script src="js/tiles.js"></script>
