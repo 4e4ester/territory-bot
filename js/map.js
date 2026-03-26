@@ -17,7 +17,6 @@ const MapGenerator = {
   generate(width, height) {
     const map = new Map();
     
-    // Создаём клетки
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < height; y++) {
         const id = `${x}_${y}`;
@@ -54,7 +53,6 @@ const MapGenerator = {
   },
 
   getTileType(x, y, w, h) {
-    // Края - вода
     if (x === 0 || x === w-1 || y === 0 || y === h-1) {
       return 'water';
     }
