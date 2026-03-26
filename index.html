@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0f0f1a">
+  <title>Territory War</title>
+  
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <!-- Стили -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Игровой контейнер -->
+  <div id="game-container">
+    <!-- 3D Canvas -->
+    <canvas id="game-canvas"></canvas>
+    
+    <!-- UI Слой -->
+    <div id="ui-layer">
+      <!-- Верхняя панель -->
+      <div id="top-bar" class="ui-panel">
+        <div class="stats">
+          <div class="stat-item">
+            <span class="stat-icon">🏰</span>
+            <span id="territories-count">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">⚔️</span>
+            <span id="troops-count">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">📍</span>
+            <span id="turn-count">1</span>
+          </div>
+        </div>
+        <button id="end-turn-btn" class="btn btn-primary">
+          ✅ Ход
+        </button>
+      </div>
+      
+      <!-- Панель атаки -->
+      <div id="attack-panel" class="ui-panel hidden">
+        <div class="attack-info">
+          <h3>⚔️ Атака</h3>
+          <p id="target-info">Цель: <span id="target-tile">-</span></p>
+        </div>
+        <div class="troops-slider">
+          <label>Войск: <span id="troops-value">10</span></label>
+          <input type="range" id="troops-slider" min="1" max="100" value="10">
+        </div>
+        <div class="attack-buttons">
+          <button id="attack-btn" class="btn btn-danger">🗡️ АТАКА</button>
+          <button id="cancel-attack-btn" class="btn btn-secondary">❌</button>
+        </div>
+      </div>
+      
+      <!-- Сообщения -->
+      <div id="message-box" class="ui-panel hidden">
+        <p id="message-text"></p>
+      </div>
+      
+      <!-- Экран победы/поражения -->
+      <div id="game-over-screen" class="ui-panel hidden">
+        <h2 id="game-over-title">🏆 Победа!</h2>
+        <p id="game-over-message"></p>
+        <button id="restart-btn" class="btn btn-primary">🔄 Заново</button>
+      </div>
+    </div>
+    
+    <!-- Главное меню -->
+    <div id="main-menu" class="menu-screen">
+      <div class="menu-content">
+        <h1>🌍 Territory War</h1>
+        <p class="subtitle">Захвати все территории!</p>
+        
+        <div class="menu-section">
+          <h3>Размер карты:</h3>
+          <div class="button-group">
+            <button class="size-btn active" data-size="small">8×8</button>
+            <button class="size-btn" data-size="medium">12×12</button>
+            <button class="size-btn" data-size="large">16×16</button>
+          </div>
+        </div>
+        
+        <div class="menu-section">
+          <h3>Боты:</h3>
+          <div class="button-group">
+            <button class="bot-count-btn active" data-count="2">2</button>
+            <button class="bot-count-btn" data-count="3">3</button>
+            <button class="bot-count-btn" data-count="4">4</button>
+          </div>
+        </div>
+        
+        <div class="menu-section">
+          <h3>Сложность:</h3>
+          <div class="button-group">
+            <button class="difficulty-btn active" data-difficulty="easy">Легко</button>
+            <button class="difficulty-btn" data-difficulty="medium">Средне</button>
+            <button class="difficulty-btn" data-difficulty="hard">Сложно</button>
+          </div>
+        </div>
+        
+        <button id="start-game-btn" class="btn btn-primary btn-large">
+          🎮 Начать игру
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Скрипты -->
+  <script src="js/store.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/tiles.js"></script>
+  <script src="js/combat.js"></script>
+  <script src="js/bot.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
