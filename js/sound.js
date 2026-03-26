@@ -32,7 +32,6 @@ const SoundSystem = {
           osc.start(now);
           osc.stop(now + 0.1);
           break;
-          
         case 'select':
           osc.frequency.setValueAtTime(600, now);
           osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
@@ -41,7 +40,6 @@ const SoundSystem = {
           osc.start(now);
           osc.stop(now + 0.15);
           break;
-          
         case 'attack':
           osc.frequency.setValueAtTime(200, now);
           osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
@@ -50,7 +48,6 @@ const SoundSystem = {
           osc.start(now);
           osc.stop(now + 0.3);
           break;
-          
         case 'capture':
           osc.type = 'sine';
           osc.frequency.setValueAtTime(523.25, now);
@@ -60,11 +57,9 @@ const SoundSystem = {
           osc.start(now);
           osc.stop(now + 0.4);
           break;
-          
         case 'win':
           this.playWin();
           return;
-          
         case 'lose':
           osc.type = 'sawtooth';
           osc.frequency.setValueAtTime(300, now);
@@ -74,7 +69,6 @@ const SoundSystem = {
           osc.start(now);
           osc.stop(now + 0.5);
           break;
-          
         case 'turn':
           osc.frequency.setValueAtTime(400, now);
           osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
@@ -93,7 +87,6 @@ const SoundSystem = {
     if (!this.ctx) return;
     const notes = [523.25, 659.25, 783.99, 1046.50];
     const now = this.ctx.currentTime;
-    
     notes.forEach((freq, i) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
