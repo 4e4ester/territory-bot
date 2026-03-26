@@ -3,76 +3,77 @@ const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
-// ===== ЗВУКОВОЙ ДВИЖОК (Web Audio API - без файлов) =====
+// ===== ЗВУКОВОЙ ДВИЖОК (MP3 файлы из папки sounds/) =====
 class SoundManager {
     constructor() {
         this.enabled = true;
-        this.audioContext = null;
-        this.init();
+        this.sounds = {};
+        this.preload();
     }
 
-    init() {
-        try {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        } catch (e) {
-            console.log('Audio not supported');
+    preload() {
+        const soundFiles = {
+            card: 'sounds/card.mp3',
+            chip: 'sounds/chip.mp3',
+            win: 'sounds/win.mp3',
+            lose: 'sounds/lose.mp3',
+            click: 'sounds/click.mp3'
+        };
+
+        for (const [name, src] of Object.entries(soundFiles)) {
+            this.sounds[name] = new Audio(src);
+            this.sounds[name].volume = 0.4;
+            this.sounds[name].preload = 'auto';
+            this.sounds[name].load();
+            
+            this.sounds[name].addEventListener('canplaythrough', () => {
+                console.log(`Звук загружен: ${name}`);
+            });
+            
+            this.sounds[name].addEventListener('error', (e) => {
+                console.warn(`Звук не загружен: ${name}`, e);
+            });
         }
     }
 
-    playTone(frequency, duration, type = 'sine', volume = 0.3) {
-        if (!this.enabled || !this.audioContext) return;
+    play(name) {
+        if (!this.enabled) return;
         
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
-        
-        oscillator.frequency.value = frequency;
-        oscillator.type = type;
-        
-        gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
-        
-        oscillator.start(this.audioContext.currentTime);
-        oscillator.stop(this.audioContext.currentTime + duration);
+        const sound = this.sounds[name];
+        if (sound) {
+            const clone = sound.cloneNode();
+            clone.volume = sound.volume;
+            clone.play().catch(() => {});
+        }
     }
 
     playCardDeal() {
-        this.playTone(800, 0.1, 'sine', 0.2);
-        setTimeout(() => this.playTone(600, 0.1, 'sine', 0.2), 50);
+        this.play('card');
     }
 
     playCardFlip() {
-        this.playTone(1000, 0.15, 'triangle', 0.3);
+        this.play('card');
     }
 
     playChip() {
-        this.playTone(1200, 0.08, 'sine', 0.2);
-        setTimeout(() => this.playTone(1400, 0.08, 'sine', 0.2), 40);
+        this.play('chip');
     }
 
     playWin() {
-        const notes = [523, 659, 784, 1046];
-        notes.forEach((freq, i) => {
-            setTimeout(() => this.playTone(freq, 0.3, 'sine', 0.3), i * 150);
-        });
+        this.play('win');
     }
 
     playLose() {
-        const notes = [784, 659, 523, 392];
-        notes.forEach((freq, i) => {
-            setTimeout(() => this.playTone(freq, 0.4, 'sine', 0.2), i * 200);
-        });
+        this.play('lose');
     }
 
     playButtonClick() {
-        this.playTone(800, 0.05, 'sine', 0.15);
+        this.play('click');
     }
 
     playRaise() {
-        this.playTone(1000, 0.1, 'square', 0.2);
-        setTimeout(() => this.playTone(1500, 0.15, 'square', 0.25), 100);
+        this.play('chip');
+        setTimeout(() => this.play('click'), 100);
     }
 
     toggle() {
@@ -752,7 +753,7 @@ function nextStage() {
 // ===== ВСКРЫТИЕ =====
 function showdown() {
     renderBotCards(false);
-    soundManager.playCardDeal();
+    soundManager.playCardFlip();
     vibrationManager.medium();
     addToLog('Вскрытие!');
     const playerRank = evaluateHand(gameState.playerCards, gameState.communityCards);
