@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Захват территории</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Главное меню -->
+        <div id="menu-screen" class="screen">
+            <div class="menu-container">
+                <div class="logo">
+                    <h1 class="title">⚔️ Захват территории</h1>
+                    <p class="subtitle">Стратегия в реальном времени</p>
+                </div>
+                <div class="settings-card">
+                    <div class="setting">
+                        <label>🤖 Количество ботов:</label>
+                        <div class="range-control">
+                            <span id="bot-count-value">3</span>
+                            <input type="range" id="bot-count" min="1" max="9" value="3">
+                        </div>
+                    </div>
+                    <div class="setting">
+                        <label>🗺️ Размер карты:</label>
+                        <select id="map-size">
+                            <option value="8">8x8 (малая)</option>
+                            <option value="12" selected>12x12 (средняя)</option>
+                            <option value="16">16x16 (большая)</option>
+                        </select>
+                    </div>
+                    <div class="setting">
+                        <label>🎓 Сложность:</label>
+                        <select id="difficulty">
+                            <option value="easy">Лёгкая</option>
+                            <option value="medium" selected>Средняя</option>
+                            <option value="hard">Сложная</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="play-btn" class="btn-primary">🚀 Играть</button>
+                <div class="sound-control">
+                    <button id="sound-toggle" class="sound-btn">🔊</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Игровой экран (заглушка) -->
+        <div id="game-screen" class="screen hidden">
+            <div class="game-container">
+                <h2>Игра скоро будет доступна</h2>
+                <p>Сейчас только меню. Позже здесь появится поле боя.</p>
+                <button id="back-to-menu" class="btn-primary">Вернуться в меню</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
