@@ -2,69 +2,120 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Захват территории</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Telegram Poker</title>
+    <!-- Подключаем Telegram SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Подключаем наши стили -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="app">
-        <!-- Главное меню -->
-        <div id="menu-screen" class="screen">
-            <div class="menu-container">
-                <div class="logo">
-                    <h1 class="title">⚔️ Захват территории</h1>
-                    <p class="subtitle">Стратегия в реальном времени</p>
+
+    <!-- ===== ГЛАВНОЕ МЕНЮ ===== -->
+    <div id="main-menu">
+        <div class="logo">🃏</div>
+        <div class="title">TELEGRAM POKER</div>
+        
+        <button class="menu-btn play" onclick="startGame()">
+            🎮 Играть
+        </button>
+        
+        <button class="menu-btn rules" onclick="showRules()">
+            📜 Правила
+        </button>
+        
+        <button class="menu-btn profile" onclick="showProfile()">
+            👤 Профиль
+        </button>
+        
+        <div class="balance-display">
+            Баланс: <span id="menu-balance">1000</span> $
+        </div>
+    </div>
+
+    <!-- ===== ИГРОВОЙ СТОЛ ===== -->
+    <div id="game-table">
+        <div class="game-header">
+            <button onclick="exitGame()" class="back-btn">←</button>
+            <div class="pot-display">Банк: <span class="pot-amount" id="pot">0</span> $</div>
+            <div id="stage-display">Префлоп</div>
+        </div>
+
+        <!-- Противник -->
+        <div class="opponent-area">
+            <div class="opponent-info">
+                <div class="avatar">🤖</div>
+                <div>
+                    <div>Бот</div>
+                    <div class="small-text">Баланс: <span id="bot-balance">1000</span> $</div>
                 </div>
-                <div class="settings-card">
-                    <div class="setting">
-                        <label>🤖 Количество ботов:</label>
-                        <div class="range-control">
-                            <span id="bot-count-value">3</span>
-                            <input type="range" id="bot-count" min="1" max="9" value="3">
-                        </div>
-                    </div>
-                    <div class="setting">
-                        <label>🗺️ Размер карты:</label>
-                        <select id="map-size">
-                            <option value="8">8x8 (малая)</option>
-                            <option value="12" selected>12x12 (средняя)</option>
-                            <option value="16">16x16 (большая)</option>
-                        </select>
-                    </div>
-                    <div class="setting">
-                        <label>🎓 Сложность:</label>
-                        <select id="difficulty">
-                            <option value="easy">Лёгкая</option>
-                            <option value="medium" selected>Средняя</option>
-                            <option value="hard">Сложная</option>
-                        </select>
-                    </div>
-                </div>
-                <button id="play-btn" class="btn-primary">🚀 Играть</button>
-                <div class="sound-control">
-                    <button id="sound-toggle" class="sound-btn">🔊</button>
-                </div>
+            </div>
+            <div class="opponent-cards" id="opponent-cards">
+                <div class="card back"></div>
+                <div class="card back"></div>
             </div>
         </div>
 
-        <!-- Игровой экран -->
-        <div id="game-screen" class="screen hidden">
-            <div class="game-container">
-                <div class="game-header">
-                    <div class="player-info">
-                        🟢 Ваши войска: <span id="player-troops">0</span>
-                    </div>
-                    <div class="turn-info" id="turn-indicator">Ваш ход</div>
-                    <button id="back-to-menu" class="small-btn">🏠 В меню</button>
+        <!-- Стол -->
+        <div class="poker-table">
+            <div class="community-cards" id="community-cards"></div>
+        </div>
+
+        <!-- Игрок -->
+        <div class="player-area">
+            <div class="player-cards" id="player-cards"></div>
+            
+            <div class="player-info">
+                <div class="player-avatar">👤</div>
+                <div>
+                    <div>Вы</div>
+                    <div class="small-text">Баланс: <span id="player-balance">1000</span> $</div>
+                    <div class="hand-rank" id="hand-rank"></div>
                 </div>
-                <canvas id="game-canvas"></canvas>
-                <div class="game-footer">
-                    <div class="controls-hint">👆 Кликните на свою клетку → на соседнюю, чтобы атаковать</div>
-                </div>
+            </div>
+
+            <div class="bet-controls" id="bet-controls">
+                <input type="number" class="bet-input" id="bet-amount" value="50" min="10">
+                <button class="control-btn raise" onclick="placeBet()">Поставить</button>
+            </div>
+
+            <div class="game-controls" id="game-controls">
+                <button class="control-btn fold" onclick="playerAction('fold')">Fold</button>
+                <button class="control-btn check" onclick="playerAction('check')">Check</button>
+                <button class="control-btn call" onclick="playerAction('call')">Call</button>
+                <button class="control-btn raise" onclick="showBetControls()">Raise</button>
             </div>
         </div>
     </div>
-    <script src="script.js"></script>
+
+    <!-- ===== СООБЩЕНИЕ О РЕЗУЛЬТАТЕ ===== -->
+    <div class="game-message" id="game-message"></div>
+
+    <!-- ===== ПРАВИЛА ===== -->
+    <div id="rules-modal">
+        <div class="rules-content">
+            <h2>📜 Правила Техасского Холдема</h2>
+            <p><strong>Цель игры:</strong> Собрать лучшую комбинацию из 5 карт.</p>
+            
+            <p><strong>Комбинации (от старшей к младшей):</strong></p>
+            <ul>
+                <li>👑 Роял Флеш</li>
+                <li>🎯 Стрит Флеш</li>
+                <li>💎 Каре</li>
+                <li>🏠 Фулл Хаус</li>
+                <li>🌊 Флеш</li>
+                <li>📏 Стрит</li>
+                <li>🔺 Сет</li>
+                <li>👌 Две пары</li>
+                <li>👍 Пара</li>
+                <li>🎲 Старшая карта</li>
+            </ul>
+
+            <button class="close-btn" onclick="hideRules()">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- Подключаем нашу логику -->
+    <script src="game.js"></script>
 </body>
 </html>
