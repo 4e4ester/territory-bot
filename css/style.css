@@ -1,3 +1,4 @@
+/* ===== БАЗА ===== */
 * {
   margin: 0;
   padding: 0;
@@ -29,7 +30,7 @@ body {
   z-index: 1;
 }
 
-/* ===== ЭКРАН ЗАГРУЗКИ ===== */
+/* ===== ЗАГРУЗКА ===== */
 #loading-screen {
   position: fixed;
   top: 0;
@@ -41,12 +42,9 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  transition: opacity 0.5s;
 }
 
 #loading-screen.hidden {
-  opacity: 0;
-  pointer-events: none;
   display: none !important;
 }
 
@@ -54,13 +52,13 @@ body {
   text-align: center;
 }
 
-.loader-spinner {
-  width: 60px;
-  height: 60px;
+.spinner {
+  width: 50px;
+  height: 50px;
   border: 4px solid rgba(59, 130, 246, 0.2);
   border-top-color: #3b82f6;
   border-radius: 50%;
-  margin: 0 auto 20px;
+  margin: 0 auto 15px;
   animation: spin 1s linear infinite;
 }
 
@@ -69,29 +67,17 @@ body {
 }
 
 .loader h2 {
-  font-size: 24px;
-  margin-bottom: 10px;
+  font-size: 22px;
+  margin-bottom: 8px;
   background: linear-gradient(135deg, #3b82f6, #8b5cf6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .loader p {
   color: #6b7280;
-  font-size: 14px;
-}
-
-.error-text {
-  color: #ef4444;
-  font-size: 12px;
-  margin-top: 10px;
-  background: rgba(239, 68, 68, 0.1);
-  padding: 8px;
-  border-radius: 6px;
-}
-
-.error-text.hidden {
-  display: none;
+  font-size: 13px;
 }
 
 /* ===== UI ===== */
@@ -110,15 +96,16 @@ body {
   background: rgba(15, 15, 30, 0.95);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .hidden {
   display: none !important;
 }
 
+/* ===== ВЕРХНЯЯ ПАНЕЛЬ ===== */
 #top-bar {
   position: absolute;
   top: 10px;
@@ -131,30 +118,26 @@ body {
 
 .stats {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
-.stat-item {
+.stat {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: rgba(255, 255, 255, 0.1);
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 5px 10px;
+  border-radius: 6px;
   font-weight: 600;
-  font-size: 13px;
-}
-
-.stat-icon {
-  font-size: 15px;
+  font-size: 12px;
 }
 
 /* ===== КНОПКИ ===== */
 .btn {
   border: none;
-  border-radius: 12px;
-  padding: 10px 20px;
-  font-size: 14px;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -168,13 +151,11 @@ body {
 .btn-primary {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .btn-danger {
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
 .btn-secondary {
@@ -183,46 +164,58 @@ body {
 }
 
 .btn-large {
-  padding: 16px 32px;
-  font-size: 18px;
+  padding: 14px 28px;
+  font-size: 16px;
   width: 100%;
 }
 
+.btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-row .btn {
+  flex: 1;
+}
+
+/* ===== ПАНЕЛЬ АТАКИ ===== */
 #attack-panel {
   position: absolute;
-  bottom: 80px;
+  bottom: 70px;
   left: 50%;
   transform: translateX(-50%);
   width: 90%;
-  max-width: 350px;
+  max-width: 320px;
   text-align: center;
 }
 
-.attack-info h3 {
-  margin-bottom: 8px;
+#attack-panel h3 {
   color: #fbbf24;
+  margin-bottom: 6px;
+  font-size: 14px;
 }
 
-.attack-info p {
+#attack-panel p {
   color: #9ca3af;
-  font-size: 13px;
+  font-size: 12px;
+  margin-bottom: 10px;
 }
 
-.troops-slider {
-  margin: 15px 0;
+.slider-container {
+  margin: 12px 0;
 }
 
-.troops-slider label {
+.slider-container label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 input[type="range"] {
   width: 100%;
-  height: 8px;
-  border-radius: 4px;
+  height: 6px;
+  border-radius: 3px;
   background: rgba(255, 255, 255, 0.2);
   outline: none;
   -webkit-appearance: none;
@@ -230,34 +223,26 @@ input[type="range"] {
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #3b82f6;
   cursor: pointer;
 }
 
-.attack-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-.attack-buttons .btn {
-  flex: 1;
-}
-
+/* ===== СООБЩЕНИЯ ===== */
 #message-box {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
-  padding: 20px 40px;
+  padding: 15px 30px;
   animation: fadeIn 0.3s;
 }
 
 #message-box p {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -266,6 +251,7 @@ input[type="range"]::-webkit-slider-thumb {
   to { opacity: 1; transform: translate(-50%, -50%); }
 }
 
+/* ===== КОНЕЦ ИГРЫ ===== */
 #game-over-screen {
   position: absolute;
   top: 50%;
@@ -273,32 +259,36 @@ input[type="range"]::-webkit-slider-thumb {
   transform: translate(-50%, -50%);
   text-align: center;
   width: 90%;
-  max-width: 350px;
-  padding: 40px 30px;
+  max-width: 320px;
+  padding: 30px 25px;
 }
 
 #game-over-title {
-  font-size: 28px;
-  margin-bottom: 15px;
+  font-size: 24px;
+  margin-bottom: 12px;
 }
 
 #game-over-message {
   color: #9ca3af;
-  margin-bottom: 25px;
-  font-size: 14px;
+  margin-bottom: 20px;
+  font-size: 13px;
 }
 
-#controls-hint {
+/* ===== ПОДСКАЗКА ===== */
+.hint {
   position: absolute;
-  bottom: 10px;
+  bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
-  padding: 8px 16px;
-  font-size: 12px;
-  color: #9ca3af;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: #6b7280;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
 }
 
+/* ===== МЕНЮ ===== */
 .menu-screen {
   position: absolute;
   top: 0;
@@ -310,69 +300,67 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: center;
   justify-content: center;
   z-index: 100;
-  padding: 20px;
+  padding: 15px;
 }
 
 .menu-content {
   width: 100%;
-  max-width: 450px;
+  max-width: 400px;
   text-align: center;
 }
 
 .menu-content h1 {
-  font-size: 32px;
-  margin-bottom: 10px;
+  font-size: 28px;
+  margin-bottom: 8px;
   background: linear-gradient(135deg, #3b82f6, #8b5cf6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .subtitle {
-  color: #9ca3af;
-  margin-bottom: 30px;
-  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 25px;
+  font-size: 13px;
 }
 
-.menu-section {
-  margin-bottom: 20px;
+.setting {
+  margin-bottom: 18px;
   text-align: left;
 }
 
-.menu-section h3 {
-  margin-bottom: 10px;
-  font-size: 12px;
+.setting h3 {
+  margin-bottom: 8px;
+  font-size: 11px;
   color: #6b7280;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.button-group {
+.btn-group {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
-.button-group button {
+.option-btn {
   flex: 1;
-  padding: 10px;
+  padding: 8px;
   border: 2px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.05);
   color: white;
-  border-radius: 10px;
+  border-radius: 8px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
-.button-group button.active {
+.option-btn:active {
+  transform: scale(0.95);
+}
+
+.option-btn.active {
   border-color: #3b82f6;
   background: rgba(59, 130, 246, 0.2);
   color: #3b82f6;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.animate-pulse {
-  animation: pulse 2s infinite;
 }
