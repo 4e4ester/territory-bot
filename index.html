@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Telegram Poker Pro</title>
+    <title>Poker Pro - Telegram</title>
     
     <!-- Telegram SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -11,384 +11,712 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
     
-    <!-- Стили -->
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <!-- Анимированный фон -->
-    <div class="bg-animation">
-        <div class="particle" style="--x: 10%; --y: 20%; --duration: 15s;"></div>
-        <div class="particle" style="--x: 30%; --y: 60%; --duration: 20s;"></div>
-        <div class="particle" style="--x: 50%; --y: 40%; --duration: 18s;"></div>
-        <div class="particle" style="--x: 70%; --y: 80%; --duration: 22s;"></div>
-        <div class="particle" style="--x: 90%; --y: 30%; --duration: 17s;"></div>
-        <div class="particle" style="--x: 20%; --y: 90%; --duration: 19s;"></div>
-        <div class="particle" style="--x: 80%; --y: 10%; --duration: 21s;"></div>
-        <div class="glow-orb" style="--x: 25%; --y: 35%;"></div>
-        <div class="glow-orb" style="--x: 75%; --y: 65%;"></div>
+<body class="theme-dark">
+    
+    <!-- ===== АНИМИРОВАННЫЙ ФОН ===== -->
+    <div class="background-container">
+        <canvas id="bg-canvas"></canvas>
+        <div class="gradient-overlay"></div>
+        <div class="vignette"></div>
+    </div>
+
+    <!-- ===== ЭКРАН ЗАГРУЗКИ ===== -->
+    <div class="loading-screen active" id="loading-screen">
+        <div class="loading-content">
+            <div class="logo-loader">
+                <div class="card-loader card-1">🂡</div>
+                <div class="card-loader card-2">🂮</div>
+                <div class="card-loader card-3">🃏</div>
+            </div>
+            <div class="loading-bar-container">
+                <div class="loading-bar" id="loading-bar"></div>
+            </div>
+            <div class="loading-text">ЗАГРУЗКА</div>
+            <div class="loading-version">v2.0 PREMIUM</div>
+        </div>
     </div>
 
     <!-- ===== ГЛАВНОЕ МЕНЮ ===== -->
-    <div id="main-menu" class="screen active">
-        <div class="menu-container">
+    <div class="screen main-menu" id="main-menu">
+        <div class="menu-content">
             <!-- Логотип -->
             <div class="logo-section">
-                <div class="logo-icon">
-                    <span class="card-symbol">🂡</span>
-                    <span class="card-symbol card-2">🂮</span>
-                    <span class="card-symbol card-3">🃏</span>
+                <div class="logo-cards">
+                    <div class="floating-card card-ace">
+                        <div class="card-face">
+                            <span class="card-value">A</span>
+                            <span class="card-suit">♠</span>
+                        </div>
+                    </div>
+                    <div class="floating-card card-king">
+                        <div class="card-face">
+                            <span class="card-value">K</span>
+                            <span class="card-suit">♥</span>
+                        </div>
+                    </div>
+                    <div class="floating-card card-joker">
+                        <div class="card-face">
+                            <span class="card-value">🃏</span>
+                        </div>
+                    </div>
                 </div>
                 <h1 class="game-title">
-                    <span class="title-gradient">POKER</span>
-                    <span class="title-sub">TELEGRAM</span>
+                    <span class="title-main">POKER</span>
+                    <span class="title-pro">PRO</span>
                 </h1>
-                <div class="version-badge">PRO v2.0</div>
+                <div class="title-divider"></div>
+                <p class="title-subtitle">TELEGRAM EDITION</p>
+                <div class="premium-badge">
+                    <i class="fas fa-crown"></i> PREMIUM
+                </div>
             </div>
 
-            <!-- Статистика игрока -->
-            <div class="player-stats">
-                <div class="stat-card">
-                    <div class="stat-icon">💰</div>
+            <!-- Профиль игрока -->
+            <div class="player-profile">
+                <div class="profile-avatar">
+                    <div class="avatar-glow"></div>
+                    <div class="avatar-border"></div>
+                    <span class="avatar-icon">👤</span>
+                    <div class="avatar-level">
+                        <span id="player-level">1</span>
+                    </div>
+                </div>
+                <div class="profile-info">
+                    <div class="player-name" id="player-name">Игрок</div>
+                    <div class="player-xp">
+                        <div class="xp-bar">
+                            <div class="xp-fill" id="xp-fill"></div>
+                        </div>
+                        <span class="xp-text"><span id="xp-current">0</span>/<span id="xp-max">100</span> XP</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="stats-showcase">
+                <div class="stat-box primary">
+                    <div class="stat-icon">
+                        <i class="fas fa-coins"></i>
+                    </div>
                     <div class="stat-value" id="menu-balance">1000</div>
-                    <div class="stat-label">Баланс</div>
+                    <div class="stat-label">БАЛАНС</div>
+                    <div class="stat-change positive" id="balance-change">
+                        <i class="fas fa-arrow-up"></i> 0%
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon">🏆</div>
+                <div class="stat-box">
+                    <div class="stat-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
                     <div class="stat-value" id="menu-wins">0</div>
-                    <div class="stat-label">Побед</div>
+                    <div class="stat-label">ПОБЕД</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon">🎮</div>
-                    <div class="stat-value" id="menu-games">0</div>
-                    <div class="stat-label">Игр</div>
+                <div class="stat-box">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-value" id="menu-winrate">0%</div>
+                    <div class="stat-label">WINRATE</div>
                 </div>
             </div>
 
             <!-- Кнопки меню -->
-            <div class="menu-buttons">
-                <button class="menu-btn btn-play" onclick="startGame()">
-                    <span class="btn-icon">🎮</span>
+            <div class="menu-nav">
+                <button class="nav-btn btn-primary" onclick="startGame()">
+                    <span class="btn-bg"></span>
+                    <span class="btn-icon">
+                        <i class="fas fa-play"></i>
+                    </span>
                     <span class="btn-text">ИГРАТЬ</span>
-                    <span class="btn-glow"></span>
+                    <span class="btn-shine"></span>
                 </button>
                 
-                <button class="menu-btn btn-secondary" onclick="showSettings()">
-                    <span class="btn-icon">⚙️</span>
-                    <span class="btn-text">Настройки</span>
-                </button>
-                
-                <button class="menu-btn btn-secondary" onclick="showStats()">
-                    <span class="btn-icon">📊</span>
-                    <span class="btn-text">Статистика</span>
-                </button>
-                
-                <button class="menu-btn btn-secondary" onclick="showRules()">
-                    <span class="btn-icon">📜</span>
-                    <span class="btn-text">Правила</span>
-                </button>
+                <div class="nav-secondary">
+                    <button class="nav-btn btn-secondary" onclick="showDailyBonus()">
+                        <span class="btn-icon"><i class="fas fa-gift"></i></span>
+                        <span class="btn-text">Бонус</span>
+                        <span class="btn-badge" id="daily-badge">!</span>
+                    </button>
+                    
+                    <button class="nav-btn btn-secondary" onclick="showAchievements()">
+                        <span class="btn-icon"><i class="fas fa-medal"></i></span>
+                        <span class="btn-text">Достижения</span>
+                    </button>
+                    
+                    <button class="nav-btn btn-secondary" onclick="showSettings()">
+                        <span class="btn-icon"><i class="fas fa-cog"></i></span>
+                        <span class="btn-text">Настройки</span>
+                    </button>
+                    
+                    <button class="nav-btn btn-secondary" onclick="showStats()">
+                        <span class="btn-icon"><i class="fas fa-chart-bar"></i></span>
+                        <span class="btn-text">Статистика</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Турниры -->
+            <div class="tournaments-section">
+                <div class="section-header">
+                    <span class="section-title">
+                        <i class="fas fa-flag-checkered"></i> ТУРНИРЫ
+                    </span>
+                    <span class="section-count">3 активных</span>
+                </div>
+                <div class="tournament-card">
+                    <div class="tournament-info">
+                        <div class="tournament-name">Ежедневный</div>
+                        <div class="tournament-prize">🏆 10,000 $</div>
+                    </div>
+                    <div class="tournament-time">
+                        <i class="fas fa-clock"></i> 23:45:00
+                    </div>
+                    <button class="tournament-btn" onclick="joinTournament()">
+                        <i class="fas fa-ticket"></i> Войти
+                    </button>
+                </div>
             </div>
 
             <!-- Футер -->
             <div class="menu-footer">
-                <div class="online-status">
-                    <span class="status-dot"></span>
-                    <span>Онлайн: <span id="online-count">1,247</span></span>
+                <div class="online-indicator">
+                    <span class="online-dot"></span>
+                    <span>Онлайн: <span id="online-count">2,847</span></span>
+                </div>
+                <div class="server-status">
+                    <span class="server-dot"></span>
+                    <span>Сервер: <span class="status-good">OK</span></span>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- ===== ИГРОВОЙ СТОЛ ===== -->
-    <div id="game-table" class="screen">
+    <div class="screen game-table" id="game-table">
         <!-- Верхняя панель -->
-        <div class="game-top-bar">
-            <button class="icon-btn" onclick="exitGame()" title="Выход">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                </svg>
+        <div class="game-header">
+            <button class="header-btn" onclick="exitGame()">
+                <i class="fas fa-arrow-left"></i>
             </button>
             
-            <div class="game-info">
-                <div class="stage-indicator" id="stage-display">
-                    <span class="stage-dot"></span>
-                    <span class="stage-text">Префлоп</span>
+            <div class="game-stage">
+                <div class="stage-indicator">
+                    <div class="stage-dots">
+                        <span class="stage-dot active" data-stage="preflop"></span>
+                        <span class="stage-dot" data-stage="flop"></span>
+                        <span class="stage-dot" data-stage="turn"></span>
+                        <span class="stage-dot" data-stage="river"></span>
+                        <span class="stage-dot" data-stage="showdown"></span>
+                    </div>
+                    <span class="stage-name" id="stage-name">ПРЕФЛОП</span>
                 </div>
             </div>
             
-            <button class="icon-btn" onclick="toggleSound()" title="Звук" id="sound-btn">
-                <svg class="sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                </svg>
-                <svg class="sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                    <line x1="23" y1="9" x2="17" y2="15"/>
-                    <line x1="17" y1="9" x2="23" y2="15"/>
-                </svg>
-            </button>
+            <div class="header-actions">
+                <button class="header-btn" onclick="toggleSound()" id="sound-btn">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+                <button class="header-btn" onclick="showHelp()">
+                    <i class="fas fa-question"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Банк -->
+        <div class="pot-container">
+            <div class="pot-display">
+                <div class="pot-icon">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div class="pot-info">
+                    <span class="pot-label">БАНК</span>
+                    <span class="pot-value" id="pot-value">0 $</span>
+                </div>
+            </div>
+            <div class="pot-chips" id="pot-chips"></div>
         </div>
 
         <!-- Противник -->
         <div class="opponent-section">
-            <div class="player-card opponent">
-                <div class="player-avatar">
+            <div class="player-panel opponent" id="opponent-panel">
+                <div class="player-avatar-container">
                     <div class="avatar-ring"></div>
-                    <span class="avatar-emoji">🤖</span>
-                    <div class="player-level">BOT</div>
+                    <div class="avatar-glow"></div>
+                    <div class="player-avatar">
+                        <span class="avatar-emoji">🤖</span>
+                    </div>
+                    <div class="player-status" id="bot-status"></div>
                 </div>
-                <div class="player-details">
-                    <div class="player-name">Бот</div>
-                    <div class="player-balance">$<span id="bot-balance">1000</span></div>
+                <div class="player-info-panel">
+                    <div class="player-name-tag">
+                        <span class="name-text">Бот</span>
+                        <span class="player-level-badge">AI</span>
+                    </div>
+                    <div class="player-chips">
+                        <i class="fas fa-coins"></i>
+                        <span id="bot-chips">1000</span>
+                    </div>
+                    <div class="player-action" id="bot-action"></div>
                 </div>
-                <div class="player-cards" id="opponent-cards">
-                    <div class="card back"></div>
-                    <div class="card back"></div>
+                <div class="player-cards" id="bot-cards">
+                    <div class="card card-back"></div>
+                    <div class="card card-back"></div>
                 </div>
-                <div class="action-bubble" id="bot-action"></div>
             </div>
         </div>
 
         <!-- Игровой стол -->
-        <div class="table-section">
+        <div class="table-area">
             <div class="poker-table">
-                <div class="table-felt"></div>
-                <div class="table-rim"></div>
-                
-                <!-- Банк -->
-                <div class="pot-display">
-                    <div class="pot-label">БАНК</div>
-                    <div class="pot-amount" id="pot">0</div>
-                    <div class="pot-chips"></div>
+                <div class="table-surface">
+                    <div class="table-pattern"></div>
+                    <div class="table-edge"></div>
                 </div>
                 
                 <!-- Общие карты -->
-                <div class="community-cards" id="community-cards"></div>
+                <div class="community-cards-area">
+                    <div class="community-cards" id="community-cards"></div>
+                </div>
                 
-                <!-- Карты дилера -->
-                <div class="dealer-button">D</div>
+                <!-- Кнопка дилера -->
+                <div class="dealer-button" id="dealer-btn">D</div>
+                
+                <!-- Лог действий -->
+                <div class="action-log" id="action-log"></div>
             </div>
         </div>
 
         <!-- Игрок -->
         <div class="player-section">
-            <div class="player-card current">
+            <div class="player-panel current" id="player-panel">
                 <div class="player-cards" id="player-cards"></div>
-                <div class="player-details">
-                    <div class="player-name">Вы</div>
-                    <div class="player-balance">$<span id="player-balance">1000</span></div>
-                    <div class="hand-rank" id="hand-rank"></div>
+                <div class="player-info-panel">
+                    <div class="player-action" id="player-action"></div>
+                    <div class="player-name-tag">
+                        <span class="name-text">Вы</span>
+                        <span class="player-level-badge" id="player-rank">NEW</span>
+                    </div>
+                    <div class="player-chips">
+                        <i class="fas fa-coins"></i>
+                        <span id="player-chips">1000</span>
+                    </div>
                 </div>
-                <div class="player-avatar">
+                <div class="player-avatar-container">
                     <div class="avatar-ring"></div>
-                    <span class="avatar-emoji">👤</span>
+                    <div class="avatar-glow"></div>
+                    <div class="player-avatar">
+                        <span class="avatar-emoji">👤</span>
+                    </div>
+                    <div class="player-status" id="player-status"></div>
                 </div>
-                <div class="action-bubble" id="player-action"></div>
             </div>
         </div>
 
         <!-- Панель управления -->
-        <div class="controls-section">
-            <div class="bet-slider-container" id="bet-slider-container" style="display:none;">
-                <label>Сумма ставки</label>
-                <input type="range" class="bet-slider" id="bet-slider" min="10" max="1000" value="50">
-                <div class="bet-value">$<span id="bet-slider-value">50</span></div>
+        <div class="controls-area">
+            <div class="bet-panel" id="bet-panel">
+                <div class="bet-slider-wrapper">
+                    <label class="bet-label">
+                        <span>Сумма ставки</span>
+                        <span class="bet-max">Макс: <span id="bet-max-value">500</span>$</span>
+                    </label>
+                    <div class="bet-slider-container">
+                        <input type="range" class="bet-slider" id="bet-slider" min="10" max="500" value="50">
+                        <div class="slider-markers">
+                            <span>0</span>
+                            <span>25%</span>
+                            <span>50%</span>
+                            <span>75%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                    <div class="bet-quick-amounts">
+                        <button class="quick-bet" data-percent="0.25">1/4</button>
+                        <button class="quick-bet" data-percent="0.5">1/2</button>
+                        <button class="quick-bet" data-percent="0.75">3/4</button>
+                        <button class="quick-bet" data-percent="1">ALL</button>
+                    </div>
+                </div>
+                <div class="bet-current">
+                    <span>Текущая:</span>
+                    <span class="bet-amount" id="bet-current-amount">50 $</span>
+                </div>
             </div>
 
-            <div class="game-controls" id="game-controls">
-                <button class="control-btn fold" onclick="playerAction('fold')">
-                    <span class="btn-label">FOLD</span>
-                    <span class="btn-sub">Сброс</span>
+            <div class="action-buttons" id="action-buttons">
+                <button class="action-btn fold" onclick="playerAction('fold')">
+                    <div class="btn-content">
+                        <i class="fas fa-times-circle"></i>
+                        <span class="btn-main">FOLD</span>
+                        <span class="btn-sub">Сбросить</span>
+                    </div>
+                    <div class="btn-effect"></div>
                 </button>
-                <button class="control-btn check" onclick="playerAction('check')">
-                    <span class="btn-label">CHECK</span>
-                    <span class="btn-sub">Чек</span>
+                
+                <button class="action-btn check" onclick="playerAction('check')">
+                    <div class="btn-content">
+                        <i class="fas fa-hand-paper"></i>
+                        <span class="btn-main">CHECK</span>
+                        <span class="btn-sub">Пропуск</span>
+                    </div>
+                    <div class="btn-effect"></div>
                 </button>
-                <button class="control-btn call" onclick="playerAction('call')">
-                    <span class="btn-label">CALL</span>
-                    <span class="btn-sub">Колл</span>
+                
+                <button class="action-btn call" onclick="playerAction('call')">
+                    <div class="btn-content">
+                        <i class="fas fa-hand-holding"></i>
+                        <span class="btn-main">CALL</span>
+                        <span class="btn-sub">Уравнять</span>
+                    </div>
+                    <div class="btn-effect"></div>
                 </button>
-                <button class="control-btn raise" onclick="showBetSlider()">
-                    <span class="btn-label">RAISE</span>
-                    <span class="btn-sub">Поднять</span>
+                
+                <button class="action-btn raise" onclick="showBetPanel()">
+                    <div class="btn-content">
+                        <i class="fas fa-arrow-up"></i>
+                        <span class="btn-main">RAISE</span>
+                        <span class="btn-sub">Поднять</span>
+                    </div>
+                    <div class="btn-effect"></div>
                 </button>
             </div>
 
-            <button class="control-btn confirm" id="confirm-bet-btn" style="display:none;" onclick="placeBet()">
-                <span class="btn-label">ПОДТВЕРДИТЬ</span>
-                <span class="btn-sub">$<span id="confirm-bet-amount">50</span></span>
+            <button class="action-btn confirm" id="confirm-bet" onclick="placeBet()">
+                <div class="btn-content">
+                    <i class="fas fa-check-circle"></i>
+                    <span class="btn-main">ПОДТВЕРДИТЬ</span>
+                    <span class="btn-sub"><span id="confirm-amount">50</span> $</span>
+                </div>
+                <div class="btn-effect"></div>
             </button>
+        </div>
+
+        <!-- Комбинация игрока -->
+        <div class="hand-evaluation" id="hand-evaluation">
+            <div class="hand-name" id="hand-name"></div>
+            <div class="hand-strength">
+                <div class="strength-bar">
+                    <div class="strength-fill" id="strength-fill"></div>
+                </div>
+                <span class="strength-value" id="strength-value">0%</span>
+            </div>
         </div>
     </div>
 
     <!-- ===== МОДАЛЬНЫЕ ОКНА ===== -->
     
-    <!-- Сообщение о результате -->
-    <div class="result-modal" id="result-modal">
-        <div class="result-content">
-            <div class="result-icon" id="result-icon">🏆</div>
+    <!-- Результат -->
+    <div class="modal result-modal" id="result-modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content result-content">
+            <div class="result-animation" id="result-animation">
+                <div class="trophy-icon">🏆</div>
+                <div class="confetti-container" id="confetti"></div>
+            </div>
             <div class="result-title" id="result-title">ПОБЕДА!</div>
-            <div class="result-subtitle" id="result-subtitle">Пара Тузов</div>
-            <div class="result-amount" id="result-amount">+$200</div>
-            <button class="modal-btn" onclick="closeResult()">Продолжить</button>
+            <div class="result-hand" id="result-hand">Пара Тузов</div>
+            <div class="result-amount" id="result-amount">+500 $</div>
+            <div class="result-xp" id="result-xp">+50 XP</div>
+            <button class="modal-btn primary" onclick="closeResult()">
+                <i class="fas fa-play"></i> Продолжить
+            </button>
         </div>
     </div>
 
     <!-- Настройки -->
-    <div class="modal-overlay" id="settings-modal">
+    <div class="modal settings-modal" id="settings-modal">
+        <div class="modal-backdrop" onclick="hideSettings()"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h2>⚙️ Настройки</h2>
-                <button class="modal-close" onclick="hideSettings()">×</button>
+                <h2><i class="fas fa-cog"></i> Настройки</h2>
+                <button class="modal-close" onclick="hideSettings()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             <div class="modal-body">
-                <div class="setting-item">
-                    <span class="setting-label">🔊 Звуки</span>
-                    <label class="toggle">
-                        <input type="checkbox" id="sound-toggle" checked onchange="toggleSoundSetting()">
-                        <span class="toggle-slider"></span>
-                    </label>
+                <div class="setting-group">
+                    <h3>Звук и Вибрация</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-volume-up"></i>
+                            <span>Звуковые эффекты</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="sound-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-music"></i>
+                            <span>Фоновая музыка</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="music-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-vibration"></i>
+                            <span>Вибрация</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="vibration-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
-                <div class="setting-item">
-                    <span class="setting-label">📳 Вибрация</span>
-                    <label class="toggle">
-                        <input type="checkbox" id="vibration-toggle" checked onchange="toggleVibrationSetting()">
-                        <span class="toggle-slider"></span>
-                    </label>
+                
+                <div class="setting-group">
+                    <h3>Визуальные</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-palette"></i>
+                            <span>Тема</span>
+                        </div>
+                        <select class="select-input" id="theme-select">
+                            <option value="dark">Тёмная</option>
+                            <option value="light">Светлая</option>
+                            <option value="neon">Неон</option>
+                            <option value="gold">Золото</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-magic"></i>
+                            <span>Анимации</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="animations-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
-                <div class="setting-item">
-                    <span class="setting-label">🎨 Тема</span>
-                    <select class="theme-select" onchange="changeTheme(this.value)">
-                        <option value="dark">Тёмная</option>
-                        <option value="light">Светлая</option>
-                        <option value="neon">Неон</option>
-                    </select>
+                
+                <div class="setting-group">
+                    <h3>Игра</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-brain"></i>
+                            <span>Сложность бота</span>
+                        </div>
+                        <select class="select-input" id="difficulty-select">
+                            <option value="easy">Легко</option>
+                            <option value="medium" selected>Средне</option>
+                            <option value="hard">Сложно</option>
+                            <option value="expert">Эксперт</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-fast-forward"></i>
+                            <span>Быстрый режим</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="fast-mode-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Статистика -->
-    <div class="modal-overlay" id="stats-modal">
+    <div class="modal stats-modal" id="stats-modal">
+        <div class="modal-backdrop" onclick="hideStats()"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📊 Статистика</h2>
-                <button class="modal-close" onclick="hideStats()">×</button>
+                <h2><i class="fas fa-chart-bar"></i> Статистика</h2>
+                <button class="modal-close" onclick="hideStats()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             <div class="modal-body">
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-value" id="stats-games">0</div>
-                        <div class="stat-label">Всего игр</div>
+                <div class="stats-overview">
+                    <div class="overview-item">
+                        <div class="overview-icon"><i class="fas fa-gamepad"></i></div>
+                        <div class="overview-value" id="stats-games">0</div>
+                        <div class="overview-label">Игр сыграно</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="stats-wins">0</div>
-                        <div class="stat-label">Побед</div>
+                    <div class="overview-item">
+                        <div class="overview-icon"><i class="fas fa-trophy"></i></div>
+                        <div class="overview-value" id="stats-wins">0</div>
+                        <div class="overview-label">Побед</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="stats-losses">0</div>
-                        <div class="stat-label">Поражений</div>
+                    <div class="overview-item">
+                        <div class="overview-icon"><i class="fas fa-chart-pie"></i></div>
+                        <div class="overview-value" id="stats-winrate">0%</div>
+                        <div class="overview-label">Винрейт</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="stats-winrate">0%</div>
-                        <div class="stat-label">Винрейт</div>
+                    <div class="overview-item">
+                        <div class="overview-icon"><i class="fas fa-coins"></i></div>
+                        <div class="overview-value" id="stats-profit">0$</div>
+                        <div class="overview-label">Профит</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="stats-biggest-win">$0</div>
-                        <div class="stat-label">Крупный выигрыш</div>
+                </div>
+                
+                <div class="stats-details">
+                    <h3>Детальная статистика</h3>
+                    <div class="detail-row">
+                        <span>Крупнейший выигрыш</span>
+                        <span class="detail-value" id="stats-biggest-win">0$</span>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="stats-total-won">$0</div>
-                        <div class="stat-label">Всего выиграно</div>
+                    <div class="detail-row">
+                        <span>Всего выиграно</span>
+                        <span class="detail-value" id="stats-total-won">0$</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Всего проиграно</span>
+                        <span class="detail-value" id="stats-total-lost">0$</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Лучшая комбинация</span>
+                        <span class="detail-value" id="stats-best-hand">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Средний банк</span>
+                        <span class="detail-value" id="stats-avg-pot">0$</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Правила -->
-    <div class="modal-overlay" id="rules-modal">
-        <div class="modal-content modal-large">
+    <!-- Достижения -->
+    <div class="modal achievements-modal" id="achievements-modal">
+        <div class="modal-backdrop" onclick="hideAchievements()"></div>
+        <div class="modal-content">
             <div class="modal-header">
-                <h2>📜 Правила</h2>
-                <button class="modal-close" onclick="hideRules()">×</button>
+                <h2><i class="fas fa-medal"></i> Достижения</h2>
+                <button class="modal-close" onclick="hideAchievements()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             <div class="modal-body">
-                <div class="rules-content">
-                    <h3>🎯 Цель игры</h3>
-                    <p>Собрать лучшую комбинацию из 5 карт, используя 2 свои карты и 5 общих карт на столе.</p>
-                    
-                    <h3>🏆 Комбинации</h3>
-                    <div class="combinations-list">
-                        <div class="combo-item">
-                            <span class="combo-icon">👑</span>
+                <div class="achievements-progress">
+                    <div class="progress-info">
+                        <span>Общий прогресс</span>
+                        <span id="achievements-percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="achievements-fill"></div>
+                    </div>
+                </div>
+                <div class="achievements-list" id="achievements-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Дневной бонус -->
+    <div class="modal bonus-modal" id="bonus-modal">
+        <div class="modal-backdrop" onclick="hideDailyBonus()"></div>
+        <div class="modal-content bonus-content">
+            <div class="bonus-icon">🎁</div>
+            <div class="bonus-title">Дневной Бонус!</div>
+            <div class="bonus-amount" id="bonus-amount">+100 $</div>
+            <div class="bonus-streak">
+                <span>Серия: </span>
+                <span id="bonus-streak">1</span>
+                <span> дней</span>
+            </div>
+            <button class="modal-btn primary" onclick="claimBonus()">
+                <i class="fas fa-gift"></i> Забрать
+            </button>
+        </div>
+    </div>
+
+    <!-- Помощь -->
+    <div class="modal help-modal" id="help-modal">
+        <div class="modal-backdrop" onclick="hideHelp()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-question-circle"></i> Помощь</h2>
+                <button class="modal-close" onclick="hideHelp()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="help-section">
+                    <h3>Комбинации карт</h3>
+                    <div class="hand-ranks">
+                        <div class="hand-rank-item">
+                            <span class="rank-icon">👑</span>
                             <div>
-                                <div class="combo-name">Роял Флеш</div>
-                                <div class="combo-desc">10, J, Q, K, A одной масти</div>
+                                <div class="rank-name">Роял Флеш</div>
+                                <div class="rank-desc">10, J, Q, K, A одной масти</div>
                             </div>
                         </div>
-                        <div class="combo-item">
-                            <span class="combo-icon">🎯</span>
+                        <div class="hand-rank-item">
+                            <span class="rank-icon">🎯</span>
                             <div>
-                                <div class="combo-name">Стрит Флеш</div>
-                                <div class="combo-desc">5 последовательных карт одной масти</div>
+                                <div class="rank-name">Стрит Флеш</div>
+                                <div class="rank-desc">5 последовательных одной масти</div>
                             </div>
                         </div>
-                        <div class="combo-item">
-                            <span class="combo-icon">💎</span>
+                        <div class="hand-rank-item">
+                            <span class="rank-icon">💎</span>
                             <div>
-                                <div class="combo-name">Каре</div>
-                                <div class="combo-desc">4 карты одного достоинства</div>
+                                <div class="rank-name">Каре</div>
+                                <div class="rank-desc">4 карты одного достоинства</div>
                             </div>
                         </div>
-                        <div class="combo-item">
-                            <span class="combo-icon">🏠</span>
+                        <div class="hand-rank-item">
+                            <span class="rank-icon">🏠</span>
                             <div>
-                                <div class="combo-name">Фулл Хаус</div>
-                                <div class="combo-desc">3 + 2 карты одного достоинства</div>
+                                <div class="rank-name">Фулл Хаус</div>
+                                <div class="rank-desc">3 + 2 карты одного достоинства</div>
                             </div>
                         </div>
-                        <div class="combo-item">
-                            <span class="combo-icon">🌊</span>
+                        <div class="hand-rank-item">
+                            <span class="rank-icon">🌊</span>
                             <div>
-                                <div class="combo-name">Флеш</div>
-                                <div class="combo-desc">5 карт одной масти</div>
+                                <div class="rank-name">Флеш</div>
+                                <div class="rank-desc">5 карт одной масти</div>
                             </div>
                         </div>
-                        <div class="combo-item">
-                            <span class="combo-icon">📏</span>
+                        <div class="hand-rank-item">
+                            <span class="rank-icon">📏</span>
                             <div>
-                                <div class="combo-name">Стрит</div>
-                                <div class="combo-desc">5 последовательных карт</div>
+                                <div class="rank-name">Стрит</div>
+                                <div class="rank-desc">5 последовательных карт</div>
                             </div>
                         </div>
-                        <div class="combo-item">
-                            <span class="combo-icon">🔺</span>
+                        <div class="hand-rank-item">
+                            <span class="rank-icon">🔺</span>
                             <div>
-                                <div class="combo-name">Сет</div>
-                                <div class="combo-desc">3 карты одного достоинства</div>
+                                <div class="rank-name">Сет</div>
+                                <div class="rank-desc">3 карты одного достоинства</div>
                             </div>
                         </div>
-                        <div class="combo-item">
-                            <span class="combo-icon">👌</span>
+                        <div class="hand-rank-item">
+                            <span class="rank-icon">👌</span>
                             <div>
-                                <div class="combo-name">Две пары</div>
-                                <div class="combo-desc">2 + 2 карты одного достоинства</div>
+                                <div class="rank-name">Две пары</div>
+                                <div class="rank-desc">2 + 2 карты одного достоинства</div>
                             </div>
                         </div>
-                        <div class="combo-item">
-                            <span class="combo-icon">👍</span>
+                        <div class="hand-rank-item">
+                            <span class="rank-icon">👍</span>
                             <div>
-                                <div class="combo-name">Пара</div>
-                                <div class="combo-desc">2 карты одного достоинства</div>
+                                <div class="rank-name">Пара</div>
+                                <div class="rank-desc">2 карты одного достоинства</div>
                             </div>
                         </div>
-                        <div class="combo-item">
-                            <span class="combo-icon">🎲</span>
+                        <div class="hand-rank-item">
+                            <span class="rank-icon">🎲</span>
                             <div>
-                                <div class="combo-name">Старшая карта</div>
-                                <div class="combo-desc">Наивысшая карта</div>
+                                <div class="rank-name">Старшая карта</div>
+                                <div class="rank-desc">Наивысшая карта</div>
                             </div>
                         </div>
                     </div>
@@ -397,16 +725,8 @@
         </div>
     </div>
 
-    <!-- Тост уведомления -->
+    <!-- Уведомления (Toast) -->
     <div class="toast-container" id="toast-container"></div>
-
-    <!-- Экран загрузки -->
-    <div class="loading-screen" id="loading-screen">
-        <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">Загрузка...</div>
-        </div>
-    </div>
 
     <!-- Логика игры -->
     <script src="game.js"></script>
