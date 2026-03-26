@@ -141,19 +141,15 @@ class BotAI {
         this.difficulty = level;
     }
 
-    // Оценка силы руки (0-1)
     evaluateHandStrength(handCards, communityCards) {
         const allCards = [...handCards, ...communityCards];
         const evaluation = evaluateHand(handCards, communityCards);
         
-        // Базовая оценка от комбинации
         let baseScore = evaluation.score / 900;
         
-        // Бонус за высокие карты
         const highCards = allCards.filter(c => c.numericValue >= 9).length;
         baseScore += highCards * 0.03;
 
-        // Бонус за пару в руке
         if (handCards.length === 2) {
             if (handCards[0].value === handCards[1].value) {
                 baseScore += 0.15;
@@ -166,7 +162,6 @@ class BotAI {
         return Math.min(baseScore, 1);
     }
 
-    // Анализ поведения игрока
     analyzePlayer(action) {
         this.memory.totalRounds++;
         if (action === 'fold') {
@@ -176,7 +171,6 @@ class BotAI {
         }
     }
 
-    // Получение статистики игрока
     getPlayerTendency() {
         if (this.memory.totalRounds < 3) return 'unknown';
         const foldRate = this.memory.playerFolds / this.memory.totalRounds;
@@ -185,7 +179,6 @@ class BotAI {
         return 'normal';
     }
 
-    // Решение бота
     decide(handCards, communityCards, gameState) {
         const handStrength = this.evaluateHandStrength(handCards, communityCards);
         const aggression = this.aggression[this.difficulty];
@@ -195,16 +188,12 @@ class BotAI {
         const callAmount = gameState.currentBet - gameState.botBet;
         const potOdds = callAmount / (gameState.pot + callAmount);
         
-        // Случайный фактор
         const random = Math.random();
         
-        // Блеф
         const shouldBluff = random < bluffChance && handStrength < 0.4;
         
-        // Эффективная сила руки (с учётом блефа)
         const effectiveStrength = shouldBluff ? 0.7 : handStrength;
 
-        // Адаптация под стиль игрока
         let adjustedAggression = aggression;
         if (playerTendency === 'passive') {
             adjustedAggression += 0.15;
@@ -212,20 +201,13 @@ class BotAI {
             adjustedAggression -= 0.1;
         }
 
-        // Принятие решения
         let action = 'fold';
-        let confidence = 0;
 
         if (effectiveStrength > 0.75) {
-            // Очень сильная рука
             action = random > 0.3 ? 'raise' : 'call';
-            confidence = 0.9;
         } else if (effectiveStrength > 0.55) {
-            // Сильная рука
             action = random > (1 - adjustedAggression) ? 'raise' : 'call';
-            confidence = 0.7;
         } else if (effectiveStrength > 0.35) {
-            // Средняя рука
             if (callAmount === 0) {
                 action = 'check';
             } else if (potOdds < 0.3 || random > (1 - adjustedAggression * 0.5)) {
@@ -233,34 +215,27 @@ class BotAI {
             } else {
                 action = 'fold';
             }
-            confidence = 0.5;
         } else {
-            // Слабая рука
             if (callAmount === 0) {
                 action = 'check';
             } else if (shouldBluff && random > 0.5) {
                 action = 'raise';
-                confidence = 0.3;
             } else if (callAmount < 20 && random > 0.7) {
                 action = 'call';
             } else {
                 action = 'fold';
             }
-            confidence = 0.2;
         }
 
-        // Экспертный уровень - больше анализа
         if (this.difficulty === 'expert') {
-            // Учитываем позицию и размер банка
             if (gameState.pot > 500 && effectiveStrength > 0.5) {
                 action = 'raise';
             }
         }
 
-        return { action, confidence, handStrength };
+        return { action, confidence: handStrength, handStrength };
     }
 
-    // Размер ставки для raise
     calculateRaiseAmount(gameState, handStrength) {
         const baseRaise = Math.floor(gameState.pot * 0.5);
         const strengthMultiplier = handStrength * 2;
@@ -335,7 +310,7 @@ class StatsManager {
         if (this.data.xp >= xpNeeded) {
             this.data.xp -= xpNeeded;
             this.data.level++;
-            return true; // Level up!
+            return true;
         }
         return false;
     }
@@ -400,10 +375,11 @@ class StatsManager {
     }
 }
 
-// ===== МЕНЕДЖЕР АНИМАЦИЙ ФОНА =====
+// ===== МЕНЕДЖЕР АНИМАЦИИ ФОНА =====
 class BackgroundAnimation {
     constructor() {
         this.canvas = document.getElementById('bg-canvas');
+        if (!this.canvas) return;
         this.ctx = this.canvas.getContext('2d');
         this.particles = [];
         this.resize();
@@ -448,7 +424,6 @@ class BackgroundAnimation {
             this.ctx.fill();
         });
 
-        // Соединительные линии
         this.particles.forEach((p1, i) => {
             this.particles.slice(i + 1).forEach(p2 => {
                 const dx = p1.x - p2.x;
@@ -538,7 +513,9 @@ function renderCard(card, container, hidden = false, delay = 0) {
     container.appendChild(el);
     
     if (!hidden) {
-        setTimeout(() => soundManager.play('card'), delay);
+        setTimeout(() => {
+            soundManager.play('card');
+        }, delay);
     }
 }
 
@@ -658,12 +635,11 @@ function updateUI() {
     document.getElementById('bet-current-amount').innerText = `${slider.value} $`;
     document.getElementById('confirm-amount').innerText = slider.value;
     
-    // Обновляем оценку руки
     updateHandEvaluation();
 }
 
 function updateHandEvaluation() {
-    if (gameStage.communityCards.length >= 3) {
+    if (gameState.communityCards.length >= 3) {
         const eval = evaluateHand(gameState.playerCards, gameState.communityCards);
         const strength = Math.min((eval.score / 900) * 100, 100);
         
@@ -793,7 +769,7 @@ function botTurn() {
         hideActionBubble('bot');
         
         const decision = botAI.decide(gameState.botCards, gameState.communityCards, gameState);
-        const { action, confidence } = decision;
+        const { action } = decision;
 
         switch(action) {
             case 'fold':
