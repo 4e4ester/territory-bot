@@ -6,20 +6,16 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#0f0f1a">
   <title>Territory War</title>
-  
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- Экран загрузки -->
   <div id="loading-screen">
     <div class="loader">
       <div class="loader-spinner"></div>
       <h2>Загрузка...</h2>
       <p id="loading-text">Инициализация</p>
-      <p id="loading-error" class="error-text hidden"></p>
     </div>
   </div>
 
@@ -27,33 +23,18 @@
     <canvas id="game-canvas"></canvas>
     
     <div id="ui-layer">
-      <!-- Верхняя панель -->
       <div id="top-bar" class="ui-panel hidden">
         <div class="stats">
-          <div class="stat-item">
-            <span class="stat-icon">🏰</span>
-            <span id="territories-count">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-icon">⚔️</span>
-            <span id="troops-count">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-icon">📍</span>
-            <span id="turn-count">1</span>
-          </div>
+          <div class="stat-item"><span>🏰</span><span id="territories-count">0</span></div>
+          <div class="stat-item"><span>⚔️</span><span id="troops-count">0</span></div>
+          <div class="stat-item"><span>📍</span><span id="turn-count">1</span></div>
         </div>
-        <button id="end-turn-btn" class="btn btn-primary">
-          ✅ Ход
-        </button>
+        <button id="end-turn-btn" class="btn btn-primary">✅ Ход</button>
       </div>
       
-      <!-- Панель атаки -->
       <div id="attack-panel" class="ui-panel hidden">
-        <div class="attack-info">
-          <h3>⚔️ Атака</h3>
-          <p id="target-info">Цель: <span id="target-tile">-</span></p>
-        </div>
+        <h3>⚔️ Атака</h3>
+        <p>Цель: <span id="target-tile">-</span></p>
         <div class="troops-slider">
           <label>Войск: <span id="troops-value">10</span></label>
           <input type="range" id="troops-slider" min="1" max="100" value="10">
@@ -64,26 +45,22 @@
         </div>
       </div>
       
-      <!-- Сообщения -->
       <div id="message-box" class="ui-panel hidden">
         <p id="message-text"></p>
       </div>
       
-      <!-- Экран победы/поражения -->
       <div id="game-over-screen" class="ui-panel hidden">
         <h2 id="game-over-title">🏆 Победа!</h2>
         <p id="game-over-message"></p>
         <button id="restart-btn" class="btn btn-primary">🔄 Заново</button>
       </div>
       
-      <!-- Подсказка управления -->
-      <div id="controls-hint" class="ui-panel hidden">
-        <p>👆 Тап - выбор | ✌️ Два пальца - зум | 🖐️ Свайп - камера</p>
+      <div id="controls-hint" class="hint-text hidden">
+        👆 Тап - выбор | ✌️ Зум | 🖐️ Свайп - камера
       </div>
     </div>
     
-    <!-- Главное меню -->
-    <div id="main-menu" class="menu-screen hidden">
+    <div id="main-menu" class="menu-screen">
       <div class="menu-content">
         <h1>🌍 Territory War</h1>
         <p class="subtitle">Захвати все территории!</p>
@@ -115,9 +92,7 @@
           </div>
         </div>
         
-        <button id="start-game-btn" class="btn btn-primary btn-large">
-          🎮 Начать игру
-        </button>
+        <button id="start-game-btn" class="btn btn-primary btn-large">🎮 Начать игру</button>
       </div>
     </div>
   </div>
