@@ -1,6 +1,4 @@
 const MapGenerator = {
-  tileTypes: ['grass', 'mountain', 'water', 'city', 'forest'],
-
   tileColors: {
     grass: '#22c55e',
     mountain: '#6b7280',
@@ -18,12 +16,13 @@ const MapGenerator = {
 
   generate(width, height) {
     const map = new Map();
-
+    
+    // Создаём клетки
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < height; y++) {
         const id = `${x}_${y}`;
         const type = this.getTileType(x, y, width, height);
-
+        
         map.set(id, {
           id,
           x,
@@ -33,71 +32,71 @@ const MapGenerator = {
           ownerId: null,
           troops: type === 'city' ? 50 : 10,
           maxTroops: this.getMaxTroops(type),
-          neighbors: [],
-          isEncircled: false
+          neighbors: []
         });
       }
     }
-
+    
+    // Соседи
     map.forEach(tile => {
-      const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-      directions.forEach(([dx, dy]) => {
-        const neighborId = `${tile.x + dx}_${tile.y + dy}`;
-        if (map.has(neighborId)) {
-          tile.neighbors.push(neighborId);
+      [[0,1], [0,-1], [1,0], [-1,0]].forEach(([dx, dy]) => {
+        const nid = `${tile.x + dx}_${tile.y + dy}`;
+        if (map.has(nid)) {
+          tile.neighbors.push(nid);
         }
       });
     });
-
-    this.placeStartPositions(map, width, height);
-
+    
+    // Стартовые позиции
+    this.placeStarts(map, width, height);
+    
     return map;
   },
 
-  getTileType(x, y, width, height) {
-    if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
+  getTileType(x, y, w, h) {
+    // Края - вода
+    if (x === 0 || x === w-1 || y === 0 || y === h-1) {
       return 'water';
     }
-
-    const rand = Math.random();
-    if (rand < 0.08) return 'mountain';
-    if (rand < 0.12) return 'forest';
-    if (rand < 0.15) return 'city';
-
+    
+    const r = Math.random();
+    if (r < 0.08) return 'mountain';
+    if (r < 0.12) return 'forest';
+    if (r < 0.15) return 'city';
     return 'grass';
   },
 
   getElevation(type) {
-    const elevations = {
-      mountain: 0.5,
-      city: 0.25,
-      forest: 0.12,
-      grass: 0.08,
-      water: -0.15
+    const elev = {
+      mountain: 0.4,
+      city: 0.2,
+      forest: 0.1,
+      grass: 0.06,
+      water: -0.1
     };
-    return elevations[type] || 0.08;
+    return elev[type] || 0.06;
   },
 
   getMaxTroops(type) {
-    const maxTroops = {
+    const max = {
       city: 200,
       mountain: 150,
       forest: 100,
       grass: 100,
       water: 0
     };
-    return maxTroops[type] || 100;
+    return max[type] || 100;
   },
 
-  placeStartPositions(map, width, height) {
-    const corners = [
+  placeStarts(map, w, h) {
+    const starts = [
       { x: 2, y: 2, owner: 'player' },
-      { x: width - 3, y: 2, owner: 'bot_easy' },
-      { x: 2, y: height - 3, owner: 'bot_medium' },
-      { x: width - 3, y: height - 3, owner: 'bot_hard' }
+      { x: w-3, y: 2, owner: 'bot_easy' },
+      { x: 2, y: h-3, owner: 'bot_medium' },
+      { x: w-3, y: h-3, owner: 'bot_hard' }
     ];
-
-    corners.forEach(({ x, y, owner }) => {
+    
+    starts.forEach(({x, y, owner}) => {
       const tile = map.get(`${x}_${y}`);
       if (tile && tile.type !== 'water') {
         tile.type = 'city';
