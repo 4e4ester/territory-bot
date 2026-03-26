@@ -48,12 +48,20 @@
             </div>
         </div>
 
-        <!-- Игровой экран (заглушка) -->
+        <!-- Игровой экран -->
         <div id="game-screen" class="screen hidden">
             <div class="game-container">
-                <h2>Игра скоро будет доступна</h2>
-                <p>Сейчас только меню. Позже здесь появится поле боя.</p>
-                <button id="back-to-menu" class="btn-primary">Вернуться в меню</button>
+                <div class="game-header">
+                    <div class="player-info">
+                        🟢 Ваши войска: <span id="player-troops">0</span>
+                    </div>
+                    <div class="turn-info" id="turn-indicator">Ваш ход</div>
+                    <button id="back-to-menu" class="small-btn">🏠 В меню</button>
+                </div>
+                <canvas id="game-canvas"></canvas>
+                <div class="game-footer">
+                    <div class="controls-hint">👆 Кликните на свою клетку → на соседнюю, чтобы атаковать</div>
+                </div>
             </div>
         </div>
     </div>
