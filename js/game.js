@@ -1,182 +1,96 @@
 const Game = {
-  scene: null,
-  camera: null,
-  renderer: null,
-  raycaster: null,
-  mouse: null,
-  tilesGroup: null,
+  canvas: null,
+  isRunning: false,
+  hoverTile: null,
   
-  camDistance: 15,
-  camHeight: 12,
-  camAngle: 0,
-  camTarget: { x: 0, y: 0 },
-  
+  // Управление камерой
   isDragging: false,
   isPinching: false,
   dragStart: { x: 0, y: 0 },
   pinchStart: 0,
   dragMoved: 0,
   dragThreshold: 10,
-
+  
+  // Таймеры
+  botTurnTimeout: null,
+  
   init() {
-    console.log('🎮 Game init...');
-    
-    // ГАРАНТИЯ: загрузка скроется через 3 секунды в любом случае
-    this.loadingTimeout = setTimeout(() => {
-      this.hideLoading();
-    }, 3000);
-    
-    // Проверка Three.js
-    if (typeof THREE === 'undefined') {
-      document.getElementById('loading-text').textContent = 'Ошибка: Three.js не загрузился';
-      console.error('❌ Three.js not loaded!');
-      setTimeout(() => this.hideLoading(), 2000);
+    this.canvas = document.getElementById('game-canvas');
+    if (!this.canvas) {
+      console.error('❌ Canvas not found');
       return;
     }
-    console.log('✅ Three.js OK');
     
-    // Звуки
-    SoundSystem.init();
-    
-    // Telegram
-    if (window.Telegram && window.Telegram.WebApp) {
-      window.Telegram.WebApp.ready();
-      window.Telegram.WebApp.expand();
-      console.log('✅ Telegram OK');
-    }
-    
-    // Инициализация 3D и UI
-    setTimeout(() => {
-      try {
-        this.init3D();
-        this.initUI();
-        GameStore.subscribe(() => this.updateUI());
-        console.log('✅ Game ready');
-      } catch (e) {
-        console.error('❌ Init error:', e);
-        document.getElementById('loading-text').textContent = 'Ошибка инициализации';
-      }
-      this.hideLoading();
-    }, 500);
+    Renderer.init(this.canvas);
+    this.setupEventListeners();
+    console.log('✅ Game initialized');
   },
-
-  hideLoading() {
-    const screen = document.getElementById('loading-screen');
-    if (screen) {
-      screen.classList.add('hidden');
-      console.log('✅ Loading screen hidden');
-    }
-    if (this.loadingTimeout) {
-      clearTimeout(this.loadingTimeout);
-    }
+  
+  setupEventListeners() {
+    // Мышь
+    this.canvas.addEventListener('mousedown', e => this.onPointerDown(e));
+    this.canvas.addEventListener('mousemove', e => this.onPointerMove(e));
+    this.canvas.addEventListener('mouseup', e => this.onPointerUp(e));
+    this.canvas.addEventListener('wheel', e => this.onWheel(e), { passive: false });
+    this.canvas.addEventListener('mouseleave', () => this.onPointerUp());
+    
+    // Тач
+    this.canvas.addEventListener('touchstart', e => this.onTouchStart(e), { passive: false });
+    this.canvas.addEventListener('touchmove', e => this.onTouchMove(e), { passive: false });
+    this.canvas.addEventListener('touchend', e => this.onTouchEnd(e), { passive: false });
+    
+    // UI кнопки
+    this.setupUIListeners();
+    
+    // Рендер цикл
+    this.renderLoop();
   },
-
-  init3D() {
-    const canvas = document.getElementById('game-canvas');
-    if (!canvas) {
-      console.error('❌ Canvas not found!');
-      return;
-    }
-    console.log('✅ Canvas found');
-    
-    // Сцена
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0f0f1a);
-    this.scene.fog = new THREE.Fog(0x0f0f1a, 20, 50);
-    
-    // Камера
-    this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    this.camera.position.set(10, 15, 10);
-    this.camera.lookAt(0, 0, 0);
-    console.log('✅ Camera created');
-    
-    // Рендерер
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    console.log('✅ Renderer created');
-    
-    // Свет
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
-    dir.position.set(10, 20, 10);
-    dir.castShadow = true;
-    this.scene.add(dir);
-    console.log('✅ Lights added');
-    
-    // Группа для клеток
-    this.tilesGroup = new THREE.Group();
-    this.scene.add(this.tilesGroup);
-    
-    // Сетка
-    const grid = new THREE.GridHelper(30, 30, 0x3b82f6, 0x1e293b);
-    grid.position.y = -0.2;
-    this.scene.add(grid);
-    
-    // Raycaster
-    this.raycaster = new THREE.Raycaster();
-    this.mouse = new THREE.Vector2();
-    
-    // События
-    canvas.addEventListener('mousedown', e => this.onPointerDown(e), false);
-    canvas.addEventListener('mousemove', e => this.onPointerMove(e), false);
-    canvas.addEventListener('mouseup', e => this.onPointerUp(e), false);
-    canvas.addEventListener('wheel', e => this.onWheel(e), { passive: false });
-    canvas.addEventListener('touchstart', e => this.onTouchStart(e), { passive: false });
-    canvas.addEventListener('touchmove', e => this.onTouchMove(e), { passive: false });
-    canvas.addEventListener('touchend', e => this.onTouchEnd(e), { passive: false });
-    window.addEventListener('resize', () => this.onResize(), false);
-    
-    TileRenderer.init(this.scene);
-    console.log('✅ TileRenderer init');
-    
-    this.animate();
-    console.log('✅ 3D initialized');
-  },
-
-  initUI() {
-    document.querySelectorAll('.option-btn').forEach(btn => {
-      btn.addEventListener('click', e => {
-        SoundSystem.play('click');
-        const parent = e.target.parentElement;
-        parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        
-        const option = e.target.dataset.option;
-        const value = e.target.dataset.value;
-        
-        if (option === 'size') {
-          GameStore.setState({ settings: { ...GameStore.getState().settings, mapSize: value } });
-        } else if (option === 'bots') {
-          GameStore.setState({ settings: { ...GameStore.getState().settings, botCount: parseInt(value) } });
-        } else if (option === 'diff') {
-          GameStore.setState({ settings: { ...GameStore.getState().settings, difficulty: value } });
-        }
-      });
+  
+  setupUIListeners() {
+    document.getElementById('end-turn-btn')?.addEventListener('click', () => {
+      SoundSystem.play('click');
+      TelegramAPI.haptic('light');
+      this.endTurn();
     });
     
-    document.getElementById('start-game-btn').addEventListener('click', () => { SoundSystem.play('click'); this.startGame(); });
-    document.getElementById('end-turn-btn').addEventListener('click', () => { SoundSystem.play('click'); this.endTurn(); });
-    document.getElementById('attack-btn').addEventListener('click', () => { SoundSystem.play('attack'); this.performAttack(); });
-    document.getElementById('cancel-attack-btn').addEventListener('click', () => { SoundSystem.play('click'); this.hideAttackPanel(); });
-    document.getElementById('restart-btn').addEventListener('click', () => { SoundSystem.play('click'); this.showMenu(); });
-    document.getElementById('troops-slider').addEventListener('input', e => {
-      GameStore.setState({ attackAmount: parseInt(e.target.value) });
-      document.getElementById('troops-value').textContent = e.target.value;
+    document.getElementById('attack-btn')?.addEventListener('click', () => {
+      SoundSystem.play('attack');
+      TelegramAPI.haptic('medium');
+      this.performAttack();
     });
     
-    window.triggerHaptic = type => {
-      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback[`${type}Occurred`]();
-      }
-    };
+    document.getElementById('cancel-attack-btn')?.addEventListener('click', () => {
+      SoundSystem.play('click');
+      this.hideAttackPanel();
+    });
     
-    console.log('✅ UI initialized');
+    document.getElementById('restart-btn')?.addEventListener('click', () => {
+      SoundSystem.play('click');
+      TelegramAPI.haptic('success');
+      this.startGame();
+    });
+    
+    document.getElementById('menu-btn')?.addEventListener('click', () => {
+      SoundSystem.play('click');
+      this.showMenu();
+    });
+    
+    document.getElementById('troops-slider')?.addEventListener('input', e => {
+      const troops = parseInt(e.target.value);
+      GameStore.setState({ attackAmount: troops });
+      document.getElementById('troops-value').textContent = troops;
+      
+      const state = GameStore.getState();
+      if (state.selectedTile && state.attackTarget) {
+        const chance = Combat.getWinChance(state.selectedTile, state.attackTarget, troops);
+        document.getElementById('win-chance').textContent = chance + '%';
+      }
+    });
   },
-
+  
   startGame() {
-    const settings = GameStore.getState().settings;
+    const state = GameStore.getState();
+    const settings = state.settings;
     const size = MapGenerator.getSizeByName(settings.mapSize);
     
     GameStore.reset();
@@ -184,86 +98,275 @@ const Game = {
       map: MapGenerator.generate(size.width, size.height),
       mapSize: size,
       phase: 'action',
-      bots: this.createBots(settings.botCount, settings.difficulty)
+      bots: BotAI.getBotConfigs(settings.botCount, settings.difficulty)
     });
     
-    TileRenderer.clear();
-    this.tilesGroup.clear();
+    Renderer.setStyle(settings.style);
+    Renderer.setCamera(0, 0, 1);
     
-    GameStore.getState().map.forEach(tile => {
-      const mesh = TileRenderer.createTile(tile);
-      if (mesh) {
-        mesh.userData.tileId = tile.id;
-        this.tilesGroup.add(mesh);
-      }
-    });
-    
-    const cx = (size.width - 1) * 1.1 / 2;
-    const cz = (size.height - 1) * 1.1 / 2;
-    this.camTarget = { x: cx, y: cz };
-    this.updateCamera();
-    
-    document.getElementById('main-menu').classList.add('hidden');
+    this.hideMenu();
     document.getElementById('top-bar').classList.remove('hidden');
     document.getElementById('controls-hint').classList.remove('hidden');
     
     this.updateUI();
-    window.triggerHaptic('success');
+    TelegramAPI.haptic('success');
     SoundSystem.play('turn');
+    
+    this.isRunning = true;
     console.log('✅ Game started');
   },
-
-  createBots(count, difficulty) {
-    const configs = [{ id: 'bot_easy', difficulty: 'easy' }, { id: 'bot_medium', difficulty: 'medium' }, { id: 'bot_hard', difficulty: 'hard' }];
-    const bots = [];
-    for (let i = 0; i < count; i++) {
-      const c = configs[i % configs.length];
-      bots.push({ id: c.id, name: `Бот ${i+1}`, difficulty });
+  
+  endTurn() {
+    const state = GameStore.getState();
+    if (state.gameOver || state.currentPlayer !== 'player') return;
+    
+    GameStore.setState({ phase: 'resolution' });
+    document.getElementById('end-turn-btn').disabled = true;
+    
+    // Ходы ботов
+    let botIndex = 0;
+    const processBotTurn = () => {
+      if (botIndex < state.bots.length) {
+        const bot = state.bots[botIndex];
+        if (!bot.eliminated) {
+          BotAI.makeTurn(bot.id);
+          BotAI.regenerateTroops(bot.id);
+        }
+        botIndex++;
+        this.botTurnTimeout = setTimeout(processBotTurn, 300);
+      } else {
+        this.finishTurn();
+      }
+    };
+    
+    processBotTurn();
+  },
+  
+  finishTurn() {
+    const state = GameStore.getState();
+    
+    // Регенерация игрока
+    GameStore.getPlayerTiles('player').forEach(tile => {
+      if (tile.troops < tile.maxTroops * 0.5) {
+        GameStore.updateTile(tile.id, { troops: tile.troops + 3 });
+      }
+    });
+    
+    GameStore.setState({
+      turn: state.turn + 1,
+      currentPlayer: 'player',
+      phase: 'action',
+      selectedTile: null,
+      attackTarget: null
+    });
+    
+    this.hideAttackPanel();
+    this.updateUI();
+    this.checkWin();
+    
+    document.getElementById('end-turn-btn').disabled = false;
+    TelegramAPI.haptic('light');
+    SoundSystem.play('turn');
+  },
+  
+  performAttack() {
+    const state = GameStore.getState();
+    if (!state.selectedTile || !state.attackTarget) return;
+    
+    const result = Combat.performAttack(
+      state.selectedTile,
+      state.attackTarget,
+      state.attackAmount
+    );
+    
+    if (result.success) {
+      TelegramAPI.haptic(result.captured ? 'success' : 'medium');
+      
+      const toTile = GameStore.getTile(state.attackTarget);
+      
+      if (result.captured) {
+        Renderer.addAnimation(state.attackTarget, 'capture');
+        SoundSystem.play('capture');
+        
+        result.annexed.forEach(id => {
+          Renderer.addAnimation(id, 'annex');
+          SoundSystem.play('annex', 0.2);
+        });
+      } else {
+        SoundSystem.play('hit');
+      }
+      
+      this.showMessage(result.message);
+      this.checkWin();
+    } else {
+      TelegramAPI.haptic('error');
+      SoundSystem.play('error');
+      this.showMessage(result.message);
     }
-    return bots;
+    
+    this.hideAttackPanel();
+    this.updateUI();
   },
-
-  updateCamera() {
-    const x = this.camTarget.x + Math.cos(this.camAngle) * this.camDistance;
-    const z = this.camTarget.z + Math.sin(this.camAngle) * this.camDistance;
-    this.camera.position.set(x, this.camHeight, z);
-    this.camera.lookAt(this.camTarget.x, 0, this.camTarget.z);
+  
+  checkWin() {
+    const state = GameStore.getState();
+    const totalTiles = Array.from(state.map.values()).filter(t => t.type !== 'water').length;
+    const playerTiles = GameStore.countTerritories('player');
+    const activeBots = state.bots.filter(b => !b.eliminated).length;
+    
+    if (playerTiles === totalTiles) {
+      this.endGame(true);
+    } else if (playerTiles === 0 || activeBots === 0) {
+      this.endGame(playerTiles > 0);
+    }
   },
-
+  
+  endGame(win) {
+    const state = GameStore.getState();
+    GameStore.setState({ gameOver: true, winner: win ? 'player' : 'bot' });
+    GameStore.updateStats(win, state.turn);
+    
+    const screen = document.getElementById('game-over-screen');
+    const icon = document.getElementById('result-icon');
+    const title = document.getElementById('game-over-title');
+    const message = document.getElementById('game-over-message');
+    
+    icon.textContent = win ? '🏆' : '💀';
+    title.textContent = win ? 'Победа!' : 'Поражение!';
+    title.style.color = win ? '#44ff44' : '#ff4444';
+    
+    document.getElementById('final-turns').textContent = state.turn;
+    document.getElementById('final-territories').textContent = GameStore.countTerritories('player');
+    document.getElementById('final-bots').textContent = state.bots.filter(b => b.eliminated).length;
+    
+    message.textContent = win 
+      ? `Вы захватили все территории за ${state.turn} ходов!` 
+      : 'Попробуйте ещё раз!';
+    
+    screen.classList.remove('hidden');
+    
+    TelegramAPI.haptic(win ? 'success' : 'error');
+    SoundSystem.play(win ? 'win' : 'lose');
+    
+    this.isRunning = false;
+  },
+  
+  showMessage(text) {
+    const box = document.getElementById('message-box');
+    document.getElementById('message-text').textContent = text;
+    box.classList.remove('hidden');
+    
+    setTimeout(() => {
+      box.classList.add('hidden');
+    }, 2000);
+  },
+  
+  showAttackPanel(tile) {
+    const panel = document.getElementById('attack-panel');
+    const slider = document.getElementById('troops-slider');
+    const selected = GameStore.getTile(GameStore.getState().selectedTile);
+    
+    if (!selected) return;
+    
+    document.getElementById('target-tile').textContent = `(${tile.x}, ${tile.y})`;
+    slider.max = selected.troops - 1;
+    slider.value = Math.min(10, slider.max);
+    
+    GameStore.setState({ attackAmount: parseInt(slider.value) });
+    document.getElementById('troops-value').textContent = slider.value;
+    document.getElementById('available-troops').textContent = selected.troops;
+    
+    const chance = Combat.getWinChance(GameStore.getState().selectedTile, tile.id, parseInt(slider.value));
+    document.getElementById('win-chance').textContent = chance + '%';
+    
+    panel.classList.remove('hidden');
+  },
+  
+  hideAttackPanel() {
+    document.getElementById('attack-panel').classList.add('hidden');
+    GameStore.setState({ attackTarget: null });
+  },
+  
+  updateUI() {
+    const state = GameStore.getState();
+    
+    document.getElementById('territories-count').textContent = GameStore.countTerritories('player');
+    document.getElementById('troops-count').textContent = GameStore.countTroops('player');
+    document.getElementById('turn-count').textContent = state.turn;
+    
+    const btn = document.getElementById('end-turn-btn');
+    if (btn) {
+      btn.disabled = state.currentPlayer !== 'player' || state.gameOver;
+      btn.style.opacity = btn.disabled ? 0.5 : 1;
+    }
+  },
+  
+  hideMenu() {
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('how-to-play-screen').classList.add('hidden');
+    document.getElementById('stats-screen').classList.add('hidden');
+  },
+  
+  showMenu() {
+    document.getElementById('main-menu').classList.remove('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('top-bar').classList.add('hidden');
+    document.getElementById('controls-hint').classList.add('hidden');
+    document.getElementById('attack-panel').classList.add('hidden');
+    
+    GameStore.setState({ phase: 'menu' });
+    Renderer.clear();
+    this.isRunning = false;
+  },
+  
+  // ===== ОБРАБОТКА ВВОДА =====
+  
   onPointerDown(e) {
     if (e.button !== 0) return;
     this.isDragging = true;
     this.dragStart = { x: e.clientX, y: e.clientY };
     this.dragMoved = 0;
   },
-
+  
   onPointerMove(e) {
-    if (!this.isDragging) return;
+    if (!this.isDragging) {
+      // Hover эффект
+      const tileId = Renderer.screenToWorld(e.clientX, e.clientY);
+      if (tileId !== this.hoverTile) {
+        this.hoverTile = tileId;
+      }
+      return;
+    }
+    
     const dx = e.clientX - this.dragStart.x;
     const dy = e.clientY - this.dragStart.y;
     this.dragMoved += Math.abs(dx) + Math.abs(dy);
-    this.camAngle -= dx * 0.005;
-    this.camHeight = Math.max(5, Math.min(25, this.camHeight - dy * 0.05));
-    this.updateCamera();
+    
+    Renderer.setCamera(
+      Renderer.camera.x + dx,
+      Renderer.camera.y + dy,
+      Renderer.camera.zoom
+    );
+    
     this.dragStart = { x: e.clientX, y: e.clientY };
   },
-
+  
   onPointerUp(e) {
     this.isDragging = false;
+    
     if (this.dragMoved < this.dragThreshold) {
       this.handleTap(e);
     }
   },
-
+  
   onWheel(e) {
     e.preventDefault();
-    this.camDistance += e.deltaY * 0.01;
-    this.camDistance = Math.max(8, Math.min(30, this.camDistance));
-    this.updateCamera();
+    Renderer.zoomCamera(e.deltaY * 0.001);
   },
-
+  
   onTouchStart(e) {
     e.preventDefault();
+    
     if (e.touches.length === 1) {
       this.isDragging = true;
       this.dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -273,72 +376,84 @@ const Game = {
       this.pinchStart = this.getPinchDistance(e.touches);
     }
   },
-
+  
   onTouchMove(e) {
     e.preventDefault();
+    
     if (this.isPinching && e.touches.length === 2) {
       const dist = this.getPinchDistance(e.touches);
-      const delta = this.pinchStart - dist;
-      this.camDistance += delta * 0.05;
-      this.camDistance = Math.max(8, Math.min(30, this.camDistance));
+      const delta = (this.pinchStart - dist) * 0.005;
+      Renderer.zoomCamera(delta);
       this.pinchStart = dist;
-      this.updateCamera();
     } else if (this.isDragging && e.touches.length === 1) {
       const dx = e.touches[0].clientX - this.dragStart.x;
       const dy = e.touches[0].clientY - this.dragStart.y;
       this.dragMoved += Math.abs(dx) + Math.abs(dy);
-      this.camAngle -= dx * 0.005;
-      this.camHeight = Math.max(5, Math.min(25, this.camHeight - dy * 0.05));
-      this.updateCamera();
+      
+      Renderer.setCamera(
+        Renderer.camera.x + dx,
+        Renderer.camera.y + dy,
+        Renderer.camera.zoom
+      );
+      
       this.dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
   },
-
+  
   onTouchEnd(e) {
     if (e.touches.length === 0) {
       this.isDragging = false;
       this.isPinching = false;
-      if (this.dragMoved < this.dragThreshold) {
+      
+      if (this.dragMoved < this.dragThreshold && e.changedTouches[0]) {
         this.handleTap(e.changedTouches[0]);
       }
     }
   },
-
+  
   getPinchDistance(touches) {
     const dx = touches[0].clientX - touches[1].clientX;
     const dy = touches[0].clientY - touches[1].clientY;
     return Math.sqrt(dx * dx + dy * dy);
   },
-
+  
   handleTap(e) {
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width * 2 - 1;
-    const y = -(e.clientY - rect.top) / rect.height * 2 + 1;
-    this.mouse.set(x, y);
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(this.tilesGroup.children);
-    if (intersects.length > 0) {
-      const tileId = intersects[0].object.userData.tileId;
-      const tile = GameStore.getTile(tileId);
-      if (tile) {
-        console.log('🎯 Tap:', tileId);
-        this.onTileSelect(tile);
-      }
-    }
+    const tileId = Renderer.screenToWorld(e.clientX, e.clientY);
+    if (!tileId) return;
+    
+    const tile = GameStore.getTile(tileId);
+    if (!tile) return;
+    
+    this.onTileSelect(tile);
   },
-
+  
   onTileSelect(tile) {
     const state = GameStore.getState();
+    
     if (state.gameOver || state.currentPlayer !== 'player') return;
-    if (state.selectedTile) TileRenderer.unhighlight(state.selectedTile);
+    
+    // Снять выделение
+    if (state.selectedTile) {
+      const prevTile = GameStore.getTile(state.selectedTile);
+      if (prevTile) {
+        // Визуальный сброс
+      }
+    }
+    
+    // Если та же клетка - отмена
     if (state.selectedTile === tile.id) {
       GameStore.setState({ selectedTile: null, attackTarget: null });
       this.hideAttackPanel();
+      TelegramAPI.haptic('selection');
       return;
     }
+    
+    // Выделить новую
     GameStore.setState({ selectedTile: tile.id });
-    TileRenderer.highlight(tile.id, '#44ff44');
     SoundSystem.play('select');
+    TelegramAPI.haptic('light');
+    
+    // Если вражеская и соседняя - показать атаку
     if (tile.ownerId && tile.ownerId !== 'player') {
       const selected = GameStore.getTile(state.selectedTile);
       if (selected && selected.neighbors.includes(tile.id)) {
@@ -349,126 +464,15 @@ const Game = {
       this.hideAttackPanel();
     }
   },
-
-  showAttackPanel(tile) {
-    const panel = document.getElementById('attack-panel');
-    const slider = document.getElementById('troops-slider');
-    const selected = GameStore.getTile(GameStore.getState().selectedTile);
-    document.getElementById('target-tile').textContent = `(${tile.x}, ${tile.y})`;
-    slider.max = selected ? selected.troops - 1 : 100;
-    slider.value = Math.min(10, slider.max);
-    GameStore.setState({ attackAmount: parseInt(slider.value) });
-    document.getElementById('troops-value').textContent = slider.value;
-    panel.classList.remove('hidden');
-  },
-
-  hideAttackPanel() {
-    document.getElementById('attack-panel').classList.add('hidden');
-    GameStore.setState({ attackTarget: null });
-  },
-
-  performAttack() {
-    const state = GameStore.getState();
-    if (!state.selectedTile || !state.attackTarget) return;
-    const result = Combat.performAttack(state.selectedTile, state.attackTarget, state.attackAmount);
-    if (result.success) {
-      window.triggerHaptic(result.captured ? 'success' : 'medium');
-      const toTile = GameStore.getTile(state.attackTarget);
-      if (toTile) TileRenderer.updateTile(toTile);
-      if (result.captured) {
-        TileRenderer.animateCapture(state.attackTarget);
-        SoundSystem.play('capture');
-        result.annexed.forEach(id => {
-          const t = GameStore.getTile(id);
-          if (t) { TileRenderer.updateTile(t); SoundSystem.play('select'); }
-        });
-      }
-      this.showMessage(result.message);
-      this.checkWin();
-    } else {
-      SoundSystem.play('lose');
-      this.showMessage(result.message);
+  
+  renderLoop() {
+    requestAnimationFrame(() => this.renderLoop());
+    
+    if (this.isRunning) {
+      const state = GameStore.getState();
+      Renderer.renderMap(state.map, state.selectedTile, this.hoverTile);
     }
-    this.hideAttackPanel();
-    this.updateUI();
-  },
-
-  endTurn() {
-    const state = GameStore.getState();
-    if (state.gameOver || state.currentPlayer !== 'player') return;
-    GameStore.setState({ phase: 'resolution' });
-    state.bots.forEach(bot => { if (!bot.eliminated) { BotAI.makeTurn(bot.id); BotAI.regenerateTroops(bot.id); } });
-    GameStore.getPlayerTiles('player').forEach(t => { if (t.troops < t.maxTroops * 0.5) GameStore.updateTile(t.id, { troops: t.troops + 2 }); });
-    GameStore.getState().map.forEach(t => TileRenderer.updateTile(t));
-    GameStore.setState({ turn: state.turn + 1, currentPlayer: 'player', phase: 'action', selectedTile: null, attackTarget: null });
-    this.updateUI();
-    this.checkWin();
-    window.triggerHaptic('light');
-    SoundSystem.play('turn');
-  },
-
-  checkWin() {
-    const state = GameStore.getState();
-    const total = Array.from(state.map.values()).filter(t => t.type !== 'water').length;
-    const player = GameStore.countTerritories('player');
-    if (player === total) this.endGame(true);
-    else if (player === 0) this.endGame(false);
-  },
-
-  endGame(win) {
-    GameStore.setState({ gameOver: true, winner: win ? 'player' : 'bot' });
-    const screen = document.getElementById('game-over-screen');
-    const title = document.getElementById('game-over-title');
-    const msg = document.getElementById('game-over-message');
-    title.textContent = win ? '🏆 Победа!' : '💀 Поражение!';
-    title.style.color = win ? '#44ff44' : '#ff4444';
-    msg.textContent = win ? `За ${GameStore.getState().turn} ходов!` : 'Попробуйте ещё раз!';
-    screen.classList.remove('hidden');
-    window.triggerHaptic(win ? 'success' : 'error');
-    SoundSystem.play(win ? 'win' : 'lose');
-  },
-
-  showMessage(text) {
-    const box = document.getElementById('message-box');
-    document.getElementById('message-text').textContent = text;
-    box.classList.remove('hidden');
-    setTimeout(() => box.classList.add('hidden'), 2000);
-  },
-
-  updateUI() {
-    const state = GameStore.getState();
-    document.getElementById('territories-count').textContent = GameStore.countTerritories('player');
-    document.getElementById('troops-count').textContent = GameStore.countTroops('player');
-    document.getElementById('turn-count').textContent = state.turn;
-    const btn = document.getElementById('end-turn-btn');
-    btn.disabled = state.currentPlayer !== 'player' || state.gameOver;
-    btn.style.opacity = btn.disabled ? 0.5 : 1;
-  },
-
-  onResize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-  },
-
-  animate() {
-    requestAnimationFrame(() => this.animate());
-    this.renderer.render(this.scene, this.camera);
-  },
-
-  showMenu() {
-    document.getElementById('main-menu').classList.remove('hidden');
-    document.getElementById('game-over-screen').classList.add('hidden');
-    document.getElementById('top-bar').classList.add('hidden');
-    document.getElementById('controls-hint').classList.add('hidden');
-    GameStore.reset();
-    GameStore.setState({ phase: 'menu' });
-    TileRenderer.clear();
-    this.tilesGroup.clear();
   }
 };
 
-window.addEventListener('DOMContentLoaded', () => {
-  console.log('🚀 DOM Ready');
-  Game.init();
-});
+window.Game = Game;
