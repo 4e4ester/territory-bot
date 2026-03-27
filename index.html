@@ -5,30 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#0f0f1a">
-  <title>Territory War</title>
-  
-  <!-- Telegram SDK -->
+  <title>Territory War 2D</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
-  <!-- Three.js (надёжный CDN) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  
-  <!-- Стили -->
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <!-- Экран загрузки -->
   <div id="loading-screen">
-    <div class="loader">
-      <div class="spinner"></div>
-      <h2>Загрузка...</h2>
-      <p id="loading-text">Подготовка</p>
+    <div class="loading-content">
+      <div class="logo">🌍</div>
+      <h1>TERRITORY WAR</h1>
+      <div class="loading-bar">
+        <div class="loading-progress" id="loading-progress"></div>
+      </div>
+      <p class="loading-text" id="loading-text">Загрузка...</p>
+      <p class="loading-tip" id="loading-tip"></p>
     </div>
   </div>
 
   <!-- Контейнер игры -->
   <div id="game-container">
-    <!-- 3D Canvas -->
+    <!-- Canvas для рендеринга -->
     <canvas id="game-canvas"></canvas>
     
     <!-- UI Слой -->
@@ -36,24 +33,37 @@
       <!-- Верхняя панель -->
       <div id="top-bar" class="ui-panel hidden">
         <div class="stats">
-          <div class="stat">🏰 <span id="territories-count">0</span></div>
-          <div class="stat">⚔️ <span id="troops-count">0</span></div>
-          <div class="stat">📍 <span id="turn-count">1</span></div>
+          <div class="stat-item">
+            <span class="stat-icon">🏰</span>
+            <span id="territories-count">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">⚔️</span>
+            <span id="troops-count">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">📍</span>
+            <span id="turn-count">1</span>
+          </div>
         </div>
         <button id="end-turn-btn" class="btn btn-primary">✅ Ход</button>
       </div>
       
       <!-- Панель атаки -->
       <div id="attack-panel" class="ui-panel hidden">
-        <h3>⚔️ Атака</h3>
-        <p>Цель: <span id="target-tile">-</span></p>
-        <div class="slider-container">
-          <label>Войск: <span id="troops-value">10</span></label>
+        <h3>⚔️ Атака территории</h3>
+        <p class="target-info">Цель: <span id="target-tile">-</span></p>
+        <div class="troops-control">
+          <label>Войск для атаки: <span id="troops-value" class="highlight">10</span></div>
           <input type="range" id="troops-slider" min="1" max="100" value="10">
+          <div class="troops-info">
+            <span>Доступно: <span id="available-troops">0</span></span>
+            <span>Шанс: <span id="win-chance">50%</span></span>
+          </div>
         </div>
         <div class="btn-row">
-          <button id="attack-btn" class="btn btn-danger">🗡️ АТАКА</button>
-          <button id="cancel-attack-btn" class="btn btn-secondary">❌</button>
+          <button id="attack-btn" class="btn btn-danger btn-full">🗡️ АТАКОВАТЬ</button>
+          <button id="cancel-attack-btn" class="btn btn-secondary btn-full">❌ Отмена</button>
         </div>
       </div>
       
@@ -64,25 +74,44 @@
       
       <!-- Экран конца игры -->
       <div id="game-over-screen" class="ui-panel hidden">
-        <h2 id="game-over-title">🏆 Победа!</h2>
+        <div class="result-icon" id="result-icon">🏆</div>
+        <h2 id="game-over-title">Победа!</h2>
+        <div class="game-stats">
+          <div class="stat-row">
+            <span>Ходов:</span>
+            <span id="final-turns">0</span>
+          </div>
+          <div class="stat-row">
+            <span>Территорий:</span>
+            <span id="final-territories">0</span>
+          </div>
+          <div class="stat-row">
+            <span>Ботов побеждено:</span>
+            <span id="final-bots">0</span>
+          </div>
+        </div>
         <p id="game-over-message"></p>
-        <button id="restart-btn" class="btn btn-primary">🔄 Заново</button>
+        <div class="btn-row">
+          <button id="restart-btn" class="btn btn-primary btn-full">🔄 Заново</button>
+          <button id="menu-btn" class="btn btn-secondary btn-full">📋 Меню</button>
+        </div>
       </div>
       
-      <!-- Подсказка -->
-      <div id="controls-hint" class="hint hidden">
-        👆 Тап - выбор | ✌️ Зум | 🖐️ Свайп - камера
+      <!-- Подсказка управления -->
+      <div id="controls-hint" class="hint-text hidden">
+        👆 Тап — выбор | 🤏 Щипок — зум | ✋ Свайп — камера
       </div>
     </div>
     
     <!-- Главное меню -->
-    <div id="main-menu" class="menu-screen">
+    <div id="main-menu" class="menu-screen hidden">
       <div class="menu-content">
-        <h1>🌍 Territory War</h1>
-        <p class="subtitle">Захвати все территории!</p>
+        <div class="menu-logo">🌍</div>
+        <h1 class="menu-title">TERRITORY WAR</h1>
+        <p class="menu-subtitle">Захвати все территории!</p>
         
-        <div class="setting">
-          <h3>Размер карты:</h3>
+        <div class="menu-section">
+          <h3>📐 Размер карты</h3>
           <div class="btn-group">
             <button class="option-btn active" data-option="size" data-value="small">8×8</button>
             <button class="option-btn" data-option="size" data-value="medium">12×12</button>
@@ -90,8 +119,8 @@
           </div>
         </div>
         
-        <div class="setting">
-          <h3>Боты:</h3>
+        <div class="menu-section">
+          <h3>🤖 Количество ботов</h3>
           <div class="btn-group">
             <button class="option-btn active" data-option="bots" data-value="2">2</button>
             <button class="option-btn" data-option="bots" data-value="3">3</button>
@@ -99,8 +128,8 @@
           </div>
         </div>
         
-        <div class="setting">
-          <h3>Сложность:</h3>
+        <div class="menu-section">
+          <h3>📊 Сложность</h3>
           <div class="btn-group">
             <button class="option-btn active" data-option="diff" data-value="easy">Легко</button>
             <button class="option-btn" data-option="diff" data-value="medium">Средне</button>
@@ -108,18 +137,98 @@
           </div>
         </div>
         
-        <button id="start-game-btn" class="btn btn-primary btn-large">🎮 Начать игру</button>
+        <div class="menu-section">
+          <h3>🎨 Стиль графики</h3>
+          <div class="btn-group">
+            <button class="option-btn active" data-option="style" data-value="modern">Современный</button>
+            <button class="option-btn" data-option="style" data-value="classic">Классический</button>
+          </div>
+        </div>
+        
+        <button id="start-game-btn" class="btn btn-primary btn-large btn-glow">🎮 НАЧАТЬ ИГРУ</button>
+        
+        <div class="menu-footer">
+          <button id="how-to-play-btn" class="btn btn-text">❓ Как играть</button>
+          <button id="stats-btn" class="btn btn-text">📊 Статистика</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Как играть -->
+    <div id="how-to-play-screen" class="menu-screen hidden">
+      <div class="menu-content">
+        <h2 class="menu-title">Как играть</h2>
+        <div class="how-to-content">
+          <div class="how-to-item">
+            <div class="how-to-icon">👆</div>
+            <div class="how-to-text">
+              <strong>Выбор территории</strong>
+              <p>Тапните по своей территории чтобы выбрать её</p>
+            </div>
+          </div>
+          <div class="how-to-item">
+            <div class="how-to-icon">⚔️</div>
+            <div class="how-to-text">
+              <strong>Атака</strong>
+              <p>Тапните по соседней вражеской территории для атаки</p>
+            </div>
+          </div>
+          <div class="how-to-item">
+            <div class="how-to-icon">🔄</div>
+            <div class="how-to-text">
+              <strong>Аннексия</strong>
+              <p>Окружите территорию врага со всех сторон для мгновенного захвата</p>
+            </div>
+          </div>
+          <div class="how-to-item">
+            <div class="how-to-icon">🏆</div>
+            <div class="how-to-text">
+              <strong>Победа</strong>
+              <p>Захватите все территории на карте для победы</p>
+            </div>
+          </div>
+        </div>
+        <button id="back-to-menu-btn" class="btn btn-primary btn-large">← Назад в меню</button>
+      </div>
+    </div>
+    
+    <!-- Статистика -->
+    <div id="stats-screen" class="menu-screen hidden">
+      <div class="menu-content">
+        <h2 class="menu-title">📊 Статистика</h2>
+        <div class="stats-content">
+          <div class="stat-card">
+            <div class="stat-card-value" id="stat-wins">0</div>
+            <div class="stat-card-label">Побед</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-value" id="stat-losses">0</div>
+            <div class="stat-card-label">Поражений</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-value" id="stat-games">0</div>
+            <div class="stat-card-label">Игр сыграно</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-value" id="stat-turns">0</div>
+            <div class="stat-card-label">Среднее ходов</div>
+          </div>
+        </div>
+        <button id="clear-stats-btn" class="btn btn-secondary">🗑️ Очистить статистику</button>
+        <button id="back-to-menu-btn-2" class="btn btn-primary btn-large">← Назад в меню</button>
       </div>
     </div>
   </div>
   
-  <!-- Скрипты игры (порядок важен!) -->
+  <!-- Скрипты -->
   <script src="js/sound.js"></script>
+  <script src="js/telegram.js"></script>
   <script src="js/store.js"></script>
   <script src="js/map.js"></script>
-  <script src="js/tiles.js"></script>
+  <script src="js/render.js"></script>
   <script src="js/combat.js"></script>
   <script src="js/bot.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
